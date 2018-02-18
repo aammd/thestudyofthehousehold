@@ -6,6 +6,7 @@ copyright = "Andrew MacDonald"
 disqusShortname = "thestudyofthehousehold"
 googleAnalytics = "XXX"
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
+relativeurls = true
 
 [Author]
     name = "Andrew MacDonald"
@@ -28,7 +29,7 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
     opengraph = true
     shareTwitter = true
     shareFacebook = true
-    shareGooglePlus = true
+    shareGooglePlus = false
     shareLinkedIn = false
     dateFormat = "Mon / 2 Jan 2006"
     highlightJsUrl = ""
@@ -36,23 +37,23 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 
 [Permalinks]
     post = "/:year/:month/:day/:filename/"
-
-[[menu.main]]
-    name = "Blog"
-    url = "/"
-    weight = 1
-
+#
+#[[menu.main]]
+#    name = "Blog"
+#    url = "/"
+#    weight = 1
+#
 #[[menu.main]]
 #    name = "Projects"
 #    url = "/project/"
 #    weight = 2
 
-[[menu.main]]
-    name = "Contact"
-    url = "/page/contact/"
-    weight = 3
-
-[[menu.main]]
-    name = "About"
-    url = "/page/about/"
-    weight = 4
+#[[menu.main]]
+#    name = "Contact"
+#    url = "/page/contact/"
+#    weight = 3
+#
+#[[menu.main]]
+#    name = "About"
+#    url = "/page/about/"
+#    weight = 4
