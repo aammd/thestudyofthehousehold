@@ -66,7 +66,7 @@ knitr::kable(Kline)
 
 We're going to create posterior predictions for this data. The first step, of course, is to fit a model! Here I'm fitting the very same model as in Rethinking, though I am using `brms` and not the `rethinking` package as in the book. The thing to notice is the `(1|culture)`, which fits a varying intercept for each culture (each little row) in the whole dataset! These intercepts are a handy way to measure "overdispersion" relative to what we would expect^[_what we'd expect see in count data_, indeed. If you have ever seen count data in Nature that was **actually** distributed as a Poisson, please leave a comment in order to claim your prize!!] see in count data. 
 
-```{r tools_pop_brms}
+```{r tools_pop_brms, results='hide'}
 library(brms)
 library(tidybayes)
 library(tidyverse)
@@ -302,7 +302,7 @@ An ecologist might do something like this if we were had data on _some_ species 
 
 In my last, much longer demonstration I'm going to reproduce figure 12.5 from Stastical Rethinking. This figure plots the results of an experiment involving different individual chimps (actors) who experience different treatments. The experiment also contains blocks, and the model fits varying intercepts for both actors and blocks. Variation among actors is quite considerable, and the figure demos three ways to display this: First, the expected mean for the average actor, then the prediction for a new actor, and finally 50 new simulated actors. This code puts together all the things I've talked about so far, and assembles the figure with the hot new [`patchwork`](https://github.com/thomasp85/patchwork) package by Thomas Lin Pedersen!
 
-```{r chimp_model}
+```{r chimp_model, results='hide'}
 data("chimpanzees", package = "rethinking")
 
 chimp_bf <- bf(pulled_left ~ 0 + intercept + prosoc_left + condition:prosoc_left + (1|actor) + (1|block),family = "bernoulli")

@@ -150,30 +150,6 @@ priors &lt;- c(set_prior(&quot;normal(0, 1)&quot;, class = &quot;b&quot;, coef =
             set_prior(&quot;cauchy(0, 1)&quot;, class = &quot;sd&quot;))
 
 tools_pop_brms &lt;- brm(tools_pop_bf, data = Kline, prior = priors, chains = 1, cores =1)</code></pre>
-<pre><code>## 
-## SAMPLING FOR MODEL &#39;poisson brms-model&#39; NOW (CHAIN 1).
-## 
-## Gradient evaluation took 3.2e-05 seconds
-## 1000 transitions using 10 leapfrog steps per transition would take 0.32 seconds.
-## Adjust your expectations accordingly!
-## 
-## 
-## Iteration:    1 / 2000 [  0%]  (Warmup)
-## Iteration:  200 / 2000 [ 10%]  (Warmup)
-## Iteration:  400 / 2000 [ 20%]  (Warmup)
-## Iteration:  600 / 2000 [ 30%]  (Warmup)
-## Iteration:  800 / 2000 [ 40%]  (Warmup)
-## Iteration: 1000 / 2000 [ 50%]  (Warmup)
-## Iteration: 1001 / 2000 [ 50%]  (Sampling)
-## Iteration: 1200 / 2000 [ 60%]  (Sampling)
-## Iteration: 1400 / 2000 [ 70%]  (Sampling)
-## Iteration: 1600 / 2000 [ 80%]  (Sampling)
-## Iteration: 1800 / 2000 [ 90%]  (Sampling)
-## Iteration: 2000 / 2000 [100%]  (Sampling)
-## 
-##  Elapsed Time: 0.610892 seconds (Warm-up)
-##                0.591594 seconds (Sampling)
-##                1.20249 seconds (Total)</code></pre>
 <p>Just as in the book, we get an adorable little linear regression with a side order of varying intercepts:</p>
 <pre class="r"><code>summary(tools_pop_brms)</code></pre>
 <pre><code>##  Family: poisson 
@@ -370,105 +346,6 @@ chimp_priors &lt;- priors &lt;- c(set_prior(&quot;normal(0, 10)&quot;, class = &
             set_prior(&quot;cauchy(0, 1)&quot;, class = &quot;sd&quot;))
 
 chimp_brms &lt;- brm(chimp_bf, prior = chimp_priors, data = chimpanzees)</code></pre>
-<pre><code>## 
-## SAMPLING FOR MODEL &#39;bernoulli brms-model&#39; NOW (CHAIN 1).
-## 
-## Gradient evaluation took 0.000267 seconds
-## 1000 transitions using 10 leapfrog steps per transition would take 2.67 seconds.
-## Adjust your expectations accordingly!
-## 
-## 
-## Iteration:    1 / 2000 [  0%]  (Warmup)
-## Iteration:  200 / 2000 [ 10%]  (Warmup)
-## Iteration:  400 / 2000 [ 20%]  (Warmup)
-## Iteration:  600 / 2000 [ 30%]  (Warmup)
-## Iteration:  800 / 2000 [ 40%]  (Warmup)
-## Iteration: 1000 / 2000 [ 50%]  (Warmup)
-## Iteration: 1001 / 2000 [ 50%]  (Sampling)
-## Iteration: 1200 / 2000 [ 60%]  (Sampling)
-## Iteration: 1400 / 2000 [ 70%]  (Sampling)
-## Iteration: 1600 / 2000 [ 80%]  (Sampling)
-## Iteration: 1800 / 2000 [ 90%]  (Sampling)
-## Iteration: 2000 / 2000 [100%]  (Sampling)
-## 
-##  Elapsed Time: 3.12877 seconds (Warm-up)
-##                3.58898 seconds (Sampling)
-##                6.71774 seconds (Total)
-## 
-## 
-## SAMPLING FOR MODEL &#39;bernoulli brms-model&#39; NOW (CHAIN 2).
-## 
-## Gradient evaluation took 0.000129 seconds
-## 1000 transitions using 10 leapfrog steps per transition would take 1.29 seconds.
-## Adjust your expectations accordingly!
-## 
-## 
-## Iteration:    1 / 2000 [  0%]  (Warmup)
-## Iteration:  200 / 2000 [ 10%]  (Warmup)
-## Iteration:  400 / 2000 [ 20%]  (Warmup)
-## Iteration:  600 / 2000 [ 30%]  (Warmup)
-## Iteration:  800 / 2000 [ 40%]  (Warmup)
-## Iteration: 1000 / 2000 [ 50%]  (Warmup)
-## Iteration: 1001 / 2000 [ 50%]  (Sampling)
-## Iteration: 1200 / 2000 [ 60%]  (Sampling)
-## Iteration: 1400 / 2000 [ 70%]  (Sampling)
-## Iteration: 1600 / 2000 [ 80%]  (Sampling)
-## Iteration: 1800 / 2000 [ 90%]  (Sampling)
-## Iteration: 2000 / 2000 [100%]  (Sampling)
-## 
-##  Elapsed Time: 3.02462 seconds (Warm-up)
-##                3.4744 seconds (Sampling)
-##                6.49902 seconds (Total)
-## 
-## 
-## SAMPLING FOR MODEL &#39;bernoulli brms-model&#39; NOW (CHAIN 3).
-## 
-## Gradient evaluation took 7.4e-05 seconds
-## 1000 transitions using 10 leapfrog steps per transition would take 0.74 seconds.
-## Adjust your expectations accordingly!
-## 
-## 
-## Iteration:    1 / 2000 [  0%]  (Warmup)
-## Iteration:  200 / 2000 [ 10%]  (Warmup)
-## Iteration:  400 / 2000 [ 20%]  (Warmup)
-## Iteration:  600 / 2000 [ 30%]  (Warmup)
-## Iteration:  800 / 2000 [ 40%]  (Warmup)
-## Iteration: 1000 / 2000 [ 50%]  (Warmup)
-## Iteration: 1001 / 2000 [ 50%]  (Sampling)
-## Iteration: 1200 / 2000 [ 60%]  (Sampling)
-## Iteration: 1400 / 2000 [ 70%]  (Sampling)
-## Iteration: 1600 / 2000 [ 80%]  (Sampling)
-## Iteration: 1800 / 2000 [ 90%]  (Sampling)
-## Iteration: 2000 / 2000 [100%]  (Sampling)
-## 
-##  Elapsed Time: 3.06995 seconds (Warm-up)
-##                2.88754 seconds (Sampling)
-##                5.95749 seconds (Total)
-## 
-## 
-## SAMPLING FOR MODEL &#39;bernoulli brms-model&#39; NOW (CHAIN 4).
-## 
-## Gradient evaluation took 0.000103 seconds
-## 1000 transitions using 10 leapfrog steps per transition would take 1.03 seconds.
-## Adjust your expectations accordingly!
-## 
-## 
-## Iteration:    1 / 2000 [  0%]  (Warmup)
-## Iteration:  200 / 2000 [ 10%]  (Warmup)
-## Iteration:  400 / 2000 [ 20%]  (Warmup)
-## Iteration:  600 / 2000 [ 30%]  (Warmup)
-## Iteration:  800 / 2000 [ 40%]  (Warmup)
-## Iteration: 1000 / 2000 [ 50%]  (Warmup)
-## Iteration: 1001 / 2000 [ 50%]  (Sampling)
-## Iteration: 1200 / 2000 [ 60%]  (Sampling)
-## Iteration: 1400 / 2000 [ 70%]  (Sampling)
-## Iteration: 1600 / 2000 [ 80%]  (Sampling)
-## Iteration: 1800 / 2000 [ 90%]  (Sampling)
-## Iteration: 2000 / 2000 [100%]  (Sampling)
-## 
-##  Elapsed Time: 3.14467 seconds (Warm-up)
-##                2.97509 seconds (Sampling)
-##                6.11976 seconds (Total)</code></pre>
 <pre class="r"><code>post_process &lt;- . %&gt;% 
   mean_qi(.prob = 0.8) %&gt;% 
   unite(combo, prosoc_left, condition, sep = &quot;/&quot;) %&gt;% 

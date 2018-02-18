@@ -31,12 +31,12 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
     shareFacebook = true
     shareGooglePlus = false
     shareLinkedIn = false
-    dateFormat = "Mon / 2 Jan 2006"
+    dateFormat = "2 Jan 2006"
     highlightJsUrl = ""
     highlightJsLocalUrl = ""
 
 [Permalinks]
-    post = ":filename/"
+    post = "post/:filename/"
 #
 #[[menu.main]]
 #    name = "Blog"
