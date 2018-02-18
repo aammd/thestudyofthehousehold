@@ -3,12 +3,12 @@ title = "The study of the household"
 theme = "ghostwriter"
 languageCode = "en-us"
 copyright = "Andrew MacDonald"
-disqusShortname = "XXX"
+disqusShortname = "thestudyofthehousehold"
 googleAnalytics = "XXX"
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 
 [Author]
-    name = "My Name"
+    name = "Andrew MacDonald"
     profile = "https://google.com/+XXX"
 
 [Taxonomies]
@@ -23,7 +23,7 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
     linkedin = "https://linkedin.com/in/XXX/"
     gplus = ""
     twitter = "https://twitter.com/polesasunder"
-    stackoverflow = "https://stackoverflow.com/users/XXX/YYY"
+    stackoverflow = "https://stackoverflow.com/users/1727133/andrewmacdonald"
     email = "a.a.m.macdonald@gmail.com"
     opengraph = true
     shareTwitter = true
@@ -42,10 +42,10 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
     url = "/"
     weight = 1
 
-[[menu.main]]
-    name = "Projects"
-    url = "/project/"
-    weight = 2
+#[[menu.main]]
+#    name = "Projects"
+#    url = "/project/"
+#    weight = 2
 
 [[menu.main]]
     name = "Contact"
