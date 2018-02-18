@@ -1,0 +1,305 @@
+---
+title: A tidy game of life
+subtitle: Not truly a game, nor truly alive, nor very tidy
+author: Andrew MacDonald
+date: '2018-01-12'
+slug: a-tidy-game-of-life
+categories:
+  - R
+tags:
+  - rstats
+  - fun
+  - gif
+---
+
+Ever since I moved to France for my postdoc in September 2016, I've tried to practice French whenever I can. One easy way to do that is by consuming YouTube channels in French -- great things to put on the the background while I make food for my son, or feed my son, or clean up after feeding my son, etc.
+
+One of my favourite _chaînes de Youtube_ is [Science Etonnante](https://www.youtube.com/channel/UCaNlbnghtwlsGF-KzAFThqA), by [David Louapre](https://sciencetonnante.wordpress.com/). Louapre is a charming and direct teacher, and the videos are well made. He's discreet about himself (I had to google his name! All I knew about him is that he's some kind of Physicist). 
+
+Over Christmas break, I was infected with Louapre's enthusiasm for a classic of computer simulations: Joseph Conway's Game of Life. Here's the video here:
+
+```{r}
+library(blogdown)
+shortcode("youtube", "S-W0NX97DB0")
+```
+
+The video covers important and general topics, like the nature of Turing-completeness and what it means for a system to have chaotic dynamics. But mostly it consists of the host enthusing over particularly beautiful or surprising structures. This is the sort of thing that I find inspiring -- so much of science is just play. Indeed the Game of Life seems full of evidence of scientists just having a good time creating interesting structures and watching them develop. They have amazing names like [Gosper's glider gun](https://en.wikipedia.org/wiki/Gun_(cellular_automaton)), and their is a fascinating taxonomy of the stable structures that develop (Gliders, Loafs, Toads, etc etc).
+
+For those of you unfamiliar with the Game of Life, the rules are very simple indeed. First, you start with a grid of cells, on which some cells are "alive". Normally, these get coloured black. The fate of any cell -- alive or dead -- is determined by the status of the 8 cells which surround it, its "neighbours". There are only four rules (source: [Wikipedia](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules): 
+    
+> 1. Any live cell with fewer than two live neighbours dies, as if caused by underpopulation.
+  2. Any live cell with two or three live neighbours lives on to the next generation.
+  3. Any live cell with more than three live neighbours dies, as if by overpopulation.
+  4. Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+
+So of course I thought I that I would try to simulate this myself, in R. 
+
+## Life in the Tidyverse
+
+The tool shapes the hand, and I've been working with the tidyverse for so long that it is easiest for me to think of problems in that way. So, in the hopes that I could solve this problem quickly, I set out to write a "tidy" approach to simulating the game of life! 
+
+#### Starting configuration
+
+I chose a simple starting configuration from the video -- something that gives a brief but interesting sequence to a final stable state. It all starts with a simple 6-block staircase.
+
+```{r plotstart, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(gganimate)
+
+knitr::opts_chunk$set(cache = TRUE)
+
+# create the grid
+space <- expand.grid(r = 1:80, c = 1:80)
+
+# define starting position
+starting <- frame_data(
+  ~r, ~c, ~v,
+  -1, -1, 1,
+  -1,  0, 1,
+   0,  0, 1,
+   0,  1, 1,
+   1,  1, 1,
+   1,  2, 1
+)
+
+starting <- starting %>% 
+  mutate(r = r + 40,
+         c = c + 40)
+
+start <- left_join(space, starting) %>% 
+  replace_na(list(v = 0))
+
+ggplot(start, aes(x = c, y = r, fill = as.factor(v))) + 
+  geom_tile(colour = "lightgrey") + 
+  coord_fixed() +
+  scale_fill_manual(values = c("1" = "forestgreen", "0" = "white")) + 
+  theme_void() + 
+  guides(fill=FALSE)
+
+appearance <-  function(gg){
+  gg + 
+    geom_tile(colour = "lightgrey") + 
+    coord_fixed() +
+    scale_fill_manual(values = c("1" = "forestgreen", "0" = "white")) + 
+    theme_void() + 
+    guides(fill=FALSE)
+}
+```
+
+Thanks to the handy `frame_data()`, it's very easy to just draw this shape on graph paper and type the coordinates of the starting squares right into R!
+
+### Find the neighbours
+
+In order to find out what happens in each time step (frequently called a 'tick' among fans of the Game), we need to consult the neighbours of every cell. We can find out what each cell's neighbours will be right at the start, and use this same matrix throughout. This is probably the "tidiest" aspect of the approach I'm using here.
+
+```{r}
+
+# Where are a cell's neighbours
+neighs <- expand.grid(r = -1:1, c = -1:1) %>% 
+  # you can't be your own neighbour
+  filter(!(r == 0 & c == 0))
+
+# where is _everyone's_ neighbour?!
+ns <- space %>% 
+  tbl_df %>% 
+  mutate(neighbour_coords = map2(r, c, ~ sweep(neighs, 2, c(.x, .y), FUN = `+`))) %>% 
+  unnest(neighbour_coords) %>% 
+  # drop the zeros and any negative cells; these are just outside the space we're studying
+  filter(r1 >= 1 & r1 <= 80,
+         c1 >= 1 & c1 <= 80)
+
+knitr::kable(head(ns, 16))
+```
+
+In this dataframe, `r` and `c` give us the coordinates of the cell in question (let's call it the "focal cell"), and `r1` and `c1` the coordinates of all of its neighbours. Because what happens to the focal cell depends on sum of all neighbours, this "list of neighbours" is going to come in handy for computing the next tick in the simulation.  
+
+Finding the neighbours in advance saves us some computational effort; it won't need to be done in each iteration later. There are a _ton_ of neighbours, just less than 8 times the number of cells in our starting grid (less, because border cells have fewer neighbours).
+
+```{r}
+nrow(start)
+nrow(ns)
+```
+
+
+### Advancing by one tick
+
+OK so how do we find out what happens to each cell, so we can predict how the shape in `start` (Figure above) is going to change? All we need is a pair of `left_join()`s. First, we `left_join` the start to the neighbour data.frame -- that shows us whether any particular neighbour is alive or dead. Then, we add them all up using `summarize`.
+
+Now we know how many neighbours each cell has, but we need one more piece of information -- the value for each cell itself. We get that with another `left_join()`. Now we have both pieces of information that we need in the same data.frame! In a final step, we just apply the rules of the Game of Life as described above. This is a nice chance to use `case_when()`, which is a handy `dplyr` function. I like it here because it lets us write out the rules of the Game very concisely:
+
+
+```{r}
+
+ns %>% 
+  left_join(start, by = c(r1 = "r", c1 = "c")) %>%
+  group_by(r, c) %>% 
+  summarize(sum_neigh = sum(v)) %>% 
+  left_join(start) %>% 
+  mutate(v_new = case_when(
+    # if the focal cell is dead, and has three neighbours, its alive now
+    v == 0 & sum_neigh == 3 ~ 1,
+    v == 1 & sum_neigh < 2  ~ 0,
+    v == 1 & sum_neigh > 3  ~ 0,
+    # otherwise leave it alone
+    TRUE                    ~ v
+  )) %>% 
+  select(r, c, v = v_new, sum_neigh) %>% 
+  ggplot(aes(x = c, y = r, fill = as.factor(v))) %>% 
+  appearance
+```
+
+At the end of this little demo pipeline I chose to use this weird trick with my homemade `appearance` function. This is a small function that takes a `ggplot2` object as its input, and adds the geoms and formatting to it that I've already chosen. This keeps me from having to re-describe this same combination of geoms and colours every time.
+
+Once we have a process that advances the simulation one tick, all we need to do is iterate the process as long as we like! A simple way to do that is to wrap the code above into a function, then run that through the trusty ol' `for` loop for, say, 70 ticks:
+
+```{r}
+tick_by_leftjoin <- function(df, .ns = ns){
+  .ns %>% 
+    left_join(df, by = c(r1 = "r", c1 = "c")) %>% 
+    group_by(r, c) %>% 
+    summarize(sum_neigh = sum(v)) %>% 
+    left_join(df, by = c("r", "c")) %>% 
+    mutate(v_new = case_when(
+      # if the focal cell is dead, and has three neighbours, its alive now
+      v == 0 & sum_neigh == 3 ~ 1,
+      v == 1 & sum_neigh < 2  ~ 0,
+      v == 1 & sum_neigh > 3  ~ 0,
+      # otherwise leave it alone
+      TRUE                    ~ v
+    )) %>% 
+    select(r, c, v = v_new)
+}
+
+# make an output list
+ll <- vector(mode = "list", 70)
+
+ll[[1]] <- start
+
+for(n in 2:length(ll)){
+  ll[[n]] <- tick_by_leftjoin(ll[[n-1]])
+}
+```
+
+Finally, once we have this object we can just turn it into a large data.frame and make a gif! This is all thanks to the very handy [`gganimate`](https://github.com/dgrtwo/gganimate) by David Robinson:
+
+```{r stair-animation, message=FALSE}
+p <- ll %>% 
+  bind_rows(.id = "tick") %>%
+  mutate(tick = as.numeric(tick)) %>% 
+  # filter(tick < 5) %>%
+  ggplot(aes(x = c, y = r, fill = as.factor(v), frame = tick)) %>% 
+  appearance
+
+gganimate(p, interval = 0.1, filename = "../../static/img/stairs.gif")
+```
+
+![](/img/stairs.gif)
+
+And that's it! Fortunately, the output above looks the same as the animation shown in the YouTube video! And now, we have a framework to run any starting configuration we like, so long as we have the patience to write it into a data.frame.
+
+### a fun exercise to the Reader
+
+_(do i have readers?)_
+
+You might find it fun to play with the famous **R-pentomino**, which generates quite the sound-and-light show from the seemingly minimal beginning of just 5 squares.  The discovery of this shape generated a lot of discussion, because it sends out "gliders" which travel forever and ever, right off the screen: it has no stable final configuration.
+
+```{r}
+pento <- tibble::tribble(
+   ~r,  ~c, ~v,
+   0L, -1L, 1L,
+  -1L,  0L, 1L,
+   0L,  0L, 1L,
+   1L,  0L, 1L,
+   1L,  1L, 1L
+  )
+
+```
+
+## other implementations
+
+I know, I know, this is not at all the best way to be doing this. For example, here is a great example using matrices on [Rosetta Code](https://rosettacode.org/wiki/Conway%27s_Game_of_Life#R). But perhaps doing this the "tidy way" is an interesting exercise -- I could see this being a homework problem in a class meant to teach the Tidyverse!
+
+
+```{r eval=FALSE, include=FALSE}
+
+## older, less optimized version
+
+# advance one step
+sweep(neighs, 2, unlist(start[4,c("r", "c")]), FUN = `+`)
+
+start %>% 
+  pmap(~ sweep(neighs, 2, c(..1, ..2), FUN = `+`))
+
+
+start_with_neighs <- start %>% 
+  tbl_df %>% 
+  mutate(neighbour_coords = map2(r, c, ~ sweep(neighs, 2, c(.x, .y), FUN = `+`)))
+
+
+# now we have a list of dataframes, giving us the coordinates for the
+# neighbours. We can now use `semi_join` to pull out neighbour cells and add them together
+
+after_join <- start_with_neighs %>% 
+  mutate(neigh_semi_join = map(neighbour_coords, semi_join, x = start, by = c("r", "c")),
+         sum_neigh       = map_dbl(neigh_semi_join, ~ sum(.x$v)))
+
+
+# finally as a last step we just apply the only two rules of the Game of Life:
+
+after_rules <- after_join %>% 
+  mutate(v_new = case_when(
+    # if the focal cell is dead, and has three neighbours, its alive now
+    v == 0 & sum_neigh == 3 ~ 1,
+    v == 1 & sum_neigh < 2  ~ 0,
+    v == 1 & sum_neigh > 3  ~ 0,
+    # otherwise leave it alone
+    TRUE                    ~ v
+  ))
+
+
+after_rules %>% 
+  ggplot(aes(x = c, y = r, fill = as.factor(v_new))) + geom_tile() + 
+  coord_fixed() + scale_fill_brewer() + theme_void()
+
+out <- after_rules %>% 
+  select(r, c, v = v_new)
+
+# place it all into a function
+
+one_tick <- function(df){
+  df_with_neighs <- df %>% 
+    tbl_df %>% 
+    mutate(neighbour_coords = map2(r, c, ~ sweep(neighs, 2, c(.x, .y), FUN = `+`)))
+ 
+  after_join <- df_with_neighs %>% 
+    mutate(neigh_semi_join = map(neighbour_coords, semi_join, x = df, by = c("r", "c")),
+           sum_neigh       = map_dbl(neigh_semi_join, ~ sum(.x$v))) 
+  
+  after_rules <- after_join %>% 
+    mutate(v_new = case_when(
+      # if the focal cell is dead, and has three neighbours, its alive now
+      v == 0 & sum_neigh == 3 ~ 1,
+      v == 1 & sum_neigh < 2  ~ 0,
+      v == 1 & sum_neigh > 3  ~ 0,
+      # otherwise leave it alone
+      TRUE                    ~ v
+    ))
+  
+  out <- after_rules %>% 
+    select(r, c, v = v_new)
+  
+  return(out)
+}
+  
+  
+# make an output list
+ll <- vector(mode = "list", 65)
+
+ll[[1]] <- start
+
+for(n in 2:length(ll)){
+  ll[[n]] <- one_tick(ll[[n-1]])
+}
+
+```
+

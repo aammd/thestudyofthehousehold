@@ -1,0 +1,17 @@
+---
+title: Formulate are a lot like French Slang
+author: Andrew MacDonald
+date: '2017-12-29'
+slug: formulate-are-a-lot-like-french-slang
+categories:
+  - R
+tags:
+  - R Markdown
+  - groovy
+  - tubular
+---
+
+
+_j'n'suis jamais y allé_
+
+If you think about it, formulae are a lot like french slang

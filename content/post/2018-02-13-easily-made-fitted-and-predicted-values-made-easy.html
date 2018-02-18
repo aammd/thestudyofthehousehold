@@ -1,0 +1,553 @@
+---
+title: Easily made fitted and predicted values made easy
+subtitle: working with posterior samples via `brms` and `tidybayes`
+author: Andrew MacDonald
+date: '2018-02-13'
+slug: easily-made-fitted-and-predicted-values-made-easy
+categories:
+  - R
+tags:
+  - bayesian
+  - rstats
+  - free advice
+  - notes
+---
+
+
+
+<p>Earlier this week I wrote out a multilevel model. It had fit well (though slowly) and I spent a happy hour admiring the chains, checking the coefficients, plotting posterior values. Life was good and easy; merrily did I sail before a fair breeze and a clear sky. My next port of call was to plot some smooth fitted lines, aka “counterfactual predictions”. Ah yes. Predicitons!<br />
+Wait. What kind of predictions? For the same groups I’ve already measured? No, for new groups? no, for some combination? Perhaps yeah, maybe that. OK let me get my posterior samples ready, I think I need to simulate some things, preserving that correlation.</p>
+<p>Alas. Winds of confusion on all sides. My progress falters, founders on hidden shoals, and coldly the waves of doubt close over my lost little head.</p>
+<p>Fear not, weary voyager, Andrew-of-the-past, this short post is a buoy in the tempest, a rope in the malestrom, a bit of timber to cling upon! And who knows, perhaps some other storm-toss’d traveller will see from afar this feeble light, and take heart?</p>
+<p>er, let me be specific. This post is my notes on making posterior predictions with and without random effects. It took me almost two days to learn this; hopefully I can remember it forever and also save you some time too, dear reader!</p>
+<div id="what-we-talk-about-when-we-talk-about-random-effects" class="section level3">
+<h3>What we talk about when we talk about random effects</h3>
+<p>The specific shoal that I crashed onto was described in McElreath’s <a href="">Statistical Rethinking</a>:</p>
+<blockquote>
+<p>All of this is confusing at first. There is not uniquely correct way to always construct the predictions, and the calculations themselves probably seem a little magical. In time, it makes a lot more sense. The fact is that multilevel models contain parameters with different <strong>focus</strong>. Focus here means which level of the model the parameter makes direct predictions for.</p>
+</blockquote>
+<p>He goes on to recognize three cases where different kinds of “focus” are required:</p>
+<ol style="list-style-type: decimal">
+<li>when you retrodict the sample (as one does when making posterior predictive checks)</li>
+<li>when you make new predictions for the same groups</li>
+<li>when you make new predictions for <em>different</em> groups</li>
+</ol>
+<p>The first two options are quite similar, different only in that the second might involve some counterfactual prediction (like a regression line). In both of them, you want to use your model’s estimates for the effects (intercepts, slopes etc) of each group. It might be that you wanted your random effects here to help you get better parameter estimates via the phenomenon variously called “shrinkage” , partial pooling, or sharing strength.</p>
+<p>In the third case, you’re not into the groups at all. Here, you are interested in where the groups <em>come from</em>. Maybe you took a look at 12 plots, but you want to know about all possible plots. Or only on three years, and you want to know about all possible years.</p>
+</div>
+<div id="making-predictions-easy" class="section level1">
+<h1>Making predictions easy</h1>
+<p>The best way to get a handle on the two kind of predictions is to learn how to make them. And the best way to make sure you’re making them correcty is to plot what you’ve made and see if it makes sense.</p>
+<p>Working through McElreath’s wonderful book gave me lots of practice making posterior predictions. However that gets more and more tedious as models get larger – and also, just knowing that there <em>is</em> an automatic way to do something is an instant argument to go learn about it. In this example, I’m going to fit these bayesian models using the wonderful <a href="https://github.com/paul-buerkner/brms"><code>brms</code></a> package by Paul-Christian Bürkner, which you should definitely study because it is the R package equivalent of the 100 emoji.</p>
+<p>I had been working with <code>brms</code> all week, extracting the posterior samples by hand and carefully joining them to my data to generate predictions. That’s when I happily stumbled upon <a href="http://mjskay.github.io/tidybayes/"><code>tidybayes</code></a> by Matthew Kay, and then I promptly forgot to eat lunch. WHAT A PACKAGE! It replicates some of the tidy data principles for bayesian data, and does it much better and more safely than all my cobbled-together machinery. If you’re all about that Bayes, clear yourself some time and study it.</p>
+<p>There are lots of good things about both <code>tidybayes</code> and <code>brms</code> that I’d love to write about, but right now on to posterior predictions. I’m going to reproduce some of the figures from Chapter 12 of the book – 12.5 and 12.6 respectively<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> – in order to make sure that I can see that I’m getting the random effects I think I am.</p>
+<div id="overdispersion-in-linear-regression" class="section level2">
+<h2>Overdispersion in linear regression</h2>
+<p>This example features a dataset about the number of tools and log population sizes of different island societies. This dataset is featured in several examples in Rethinking and its dimensions are, shall we say, modest:</p>
+<pre class="r"><code>data(&quot;Kline&quot;, package = &quot;rethinking&quot;)
+
+knitr::kable(Kline)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">culture</th>
+<th align="right">population</th>
+<th align="left">contact</th>
+<th align="right">total_tools</th>
+<th align="right">mean_TU</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Malekula</td>
+<td align="right">1100</td>
+<td align="left">low</td>
+<td align="right">13</td>
+<td align="right">3.2</td>
+</tr>
+<tr class="even">
+<td align="left">Tikopia</td>
+<td align="right">1500</td>
+<td align="left">low</td>
+<td align="right">22</td>
+<td align="right">4.7</td>
+</tr>
+<tr class="odd">
+<td align="left">Santa Cruz</td>
+<td align="right">3600</td>
+<td align="left">low</td>
+<td align="right">24</td>
+<td align="right">4.0</td>
+</tr>
+<tr class="even">
+<td align="left">Yap</td>
+<td align="right">4791</td>
+<td align="left">high</td>
+<td align="right">43</td>
+<td align="right">5.0</td>
+</tr>
+<tr class="odd">
+<td align="left">Lau Fiji</td>
+<td align="right">7400</td>
+<td align="left">high</td>
+<td align="right">33</td>
+<td align="right">5.0</td>
+</tr>
+<tr class="even">
+<td align="left">Trobriand</td>
+<td align="right">8000</td>
+<td align="left">high</td>
+<td align="right">19</td>
+<td align="right">4.0</td>
+</tr>
+<tr class="odd">
+<td align="left">Chuuk</td>
+<td align="right">9200</td>
+<td align="left">high</td>
+<td align="right">40</td>
+<td align="right">3.8</td>
+</tr>
+<tr class="even">
+<td align="left">Manus</td>
+<td align="right">13000</td>
+<td align="left">low</td>
+<td align="right">28</td>
+<td align="right">6.6</td>
+</tr>
+<tr class="odd">
+<td align="left">Tonga</td>
+<td align="right">17500</td>
+<td align="left">high</td>
+<td align="right">55</td>
+<td align="right">5.4</td>
+</tr>
+<tr class="even">
+<td align="left">Hawaii</td>
+<td align="right">275000</td>
+<td align="left">low</td>
+<td align="right">71</td>
+<td align="right">6.6</td>
+</tr>
+</tbody>
+</table>
+<p>.. that’s literally the whole thing.</p>
+<p>We’re going to create posterior predictions for this data. The first step, of course, is to fit a model! Here I’m fitting the very same model as in Rethinking, though I am using <code>brms</code> and not the <code>rethinking</code> package as in the book. The thing to notice is the <code>(1|culture)</code>, which fits a varying intercept for each culture (each little row) in the whole dataset! These intercepts are a handy way to measure “overdispersion” relative to what we would expect<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a> see in count data.</p>
+<pre class="r"><code>library(brms)
+library(tidybayes)
+library(tidyverse)
+library(modelr)
+library(ggplot2)
+library(ggridges)
+library(patchwork)
+
+
+Kline$logpop &lt;- log(Kline$population)
+
+tools_pop_bf &lt;- bf(total_tools ~ 0 + intercept + logpop + (1|culture), family = &quot;poisson&quot;)
+
+priors &lt;- c(set_prior(&quot;normal(0, 1)&quot;, class = &quot;b&quot;, coef = &quot;logpop&quot;),
+            set_prior(&quot;normal(0, 10)&quot;, class = &quot;b&quot;, coef = &quot;intercept&quot;),
+            set_prior(&quot;cauchy(0, 1)&quot;, class = &quot;sd&quot;))
+
+tools_pop_brms &lt;- brm(tools_pop_bf, data = Kline, prior = priors, chains = 1, cores =1)</code></pre>
+<pre><code>## 
+## SAMPLING FOR MODEL &#39;poisson brms-model&#39; NOW (CHAIN 1).
+## 
+## Gradient evaluation took 3.2e-05 seconds
+## 1000 transitions using 10 leapfrog steps per transition would take 0.32 seconds.
+## Adjust your expectations accordingly!
+## 
+## 
+## Iteration:    1 / 2000 [  0%]  (Warmup)
+## Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Iteration: 2000 / 2000 [100%]  (Sampling)
+## 
+##  Elapsed Time: 0.610892 seconds (Warm-up)
+##                0.591594 seconds (Sampling)
+##                1.20249 seconds (Total)</code></pre>
+<p>Just as in the book, we get an adorable little linear regression with a side order of varying intercepts:</p>
+<pre class="r"><code>summary(tools_pop_brms)</code></pre>
+<pre><code>##  Family: poisson 
+##   Links: mu = log 
+## Formula: total_tools ~ 0 + intercept + logpop + (1 | culture) 
+##    Data: Kline (Number of observations: 10) 
+## Samples: 1 chains, each with iter = 2000; warmup = 1000; thin = 1; 
+##          total post-warmup samples = 1000
+##     ICs: LOO = NA; WAIC = NA; R2 = NA
+##  
+## Group-Level Effects: 
+## ~culture (Number of levels: 10) 
+##               Estimate Est.Error l-95% CI u-95% CI Eff.Sample Rhat
+## sd(Intercept)     0.32      0.13     0.12     0.63        245 1.00
+## 
+## Population-Level Effects: 
+##           Estimate Est.Error l-95% CI u-95% CI Eff.Sample Rhat
+## intercept     1.05      0.87    -0.81     2.46        150 1.00
+## logpop        0.27      0.09     0.11     0.48        150 1.00
+## 
+## Samples were drawn using sampling(NUTS). For each parameter, Eff.Sample 
+## is a crude measure of effective sample size, and Rhat is the potential 
+## scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
+<p>These show up in the <code>brms</code> output as “Group-level effects” and the slope and intercept from the model is labelled a “Population-level effect”. When I first saw this, I found it pretty confusing – but this is just one of many coexisting terminologies for the different parts of the same model. Some might say “main effects” or “fixed effects” or whatever. It’s all just like, language, y’know?</p>
+<p>Anyway, let’s focus on making predictions. Suppose we were going to sample a new island. We’ll measure its size, and then we will want to <em>predict</em> how many tools the people there might have. What do we expect? Well, the new island will have the same effect of population that we see everywhere else (ie the slope), so we can calculate the mean. But we already know that each island will <em>also</em> have its own special snowflake distance from that mean. We can’t know what this will be exactly<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a> but we <em>can</em> sample a whole snowdrift of special snowflakes, and see how they pile up!</p>
+<p>We’re going to do this in just three lines of code! This uses two hand packages: <a href="https://github.com/tidyverse/modelr"><code>modelr::data_grid</code></a> to set up the data, and <code>tidybayes::add_predicted_samples</code></p>
+<pre class="r"><code>Kline_post_samp &lt;- Kline %&gt;% 
+  data_grid(logpop = seq_range(logpop, n = 200)) %&gt;% 
+  add_predicted_samples(model = tools_pop_brms,
+                        re_formula = NULL,
+                        allow_new_levels = TRUE)
+
+head(Kline_post_samp)</code></pre>
+<pre><code>## # A tibble: 6 x 5
+## # Groups:   logpop, .row [1]
+##   logpop  .row .chain .iteration  pred
+##    &lt;dbl&gt; &lt;int&gt;  &lt;int&gt;      &lt;int&gt; &lt;int&gt;
+## 1   7.00     1     NA          1    18
+## 2   7.00     1     NA          2    33
+## 3   7.00     1     NA          3    26
+## 4   7.00     1     NA          4    25
+## 5   7.00     1     NA          5    26
+## 6   7.00     1     NA          6    15</code></pre>
+<p>As you can see, we get a monstrous long data.frame back. Each posterior sample from each iteration has its own line. <code>tidybayes</code> also features some handy functions for calculating intervals out of all these numbers. In Rethinking, a frequent choice is HPDIs (Highest Posterior Density Intervals) of 97%, 89% and 73%. Here they are for this model:</p>
+<pre class="r"><code>inters &lt;- Kline_post_samp %&gt;% 
+  median_hdi(.prob = c(0.73, 0.89, 0.97))
+
+inters %&gt;%
+  ungroup %&gt;% 
+  mutate(prob_fac = factor(.prob),
+         prob_fac = forcats::fct_reorder(prob_fac, .prob, .desc = TRUE)) %&gt;%
+  ggplot(aes(x = logpop, y = pred)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = prob_fac)) + 
+  scale_fill_brewer(palette = &quot;Greens&quot;, direction = -1) + 
+  coord_cartesian(ylim = c(12, 70)) + 
+  geom_line() + 
+  geom_point(aes(x = logpop, y = total_tools), data = Kline) + 
+  labs(title = &quot;Predicted tool number and log population&quot;,
+       x = &quot;Population (log)&quot;,
+       y = &quot;Total tools&quot;)</code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/plot_kline_post_samp-1.png" width="672" /></p>
+<p>Which is a fair, but hardly exact, match for figure 12.6 in Rethinking. In fact, I was confused about this too, and actually <a href="https://stats.stackexchange.com/questions/328283/why-are-posterior-predictions-jagged/328792#328792">asked about it on stackoverflow</a>. It turns out that the jagged shape is simply sampling error. Of course, as Gavin pointed out on Twitter (and is quoted in the answer there) smooth lines are possible if we ask for fitted, not predicted values. I didn’t do that, because I wanted to stick to what the book had done.</p>
+<p>I want to talk a bit about two arguments to <code>add_predicted_samples</code> above: <code>re_formula</code> and <code>allow_new_levels</code>. Although these are arguments to <code>tidybayes::add_predicted_samples</code>, that function just passes them straight to <code>brms::posterior_predict</code> (or, in the case of <code>tidybayes::add_fitted_samples</code>, to <code>brms::posterior_linpred</code>). So we need to look there to find them documented. Now I am an enormous fan of <code>brms</code>, but I must say that the help file here was at first a source of great confusion for me:</p>
+<blockquote>
+<p><code>re_formula</code> formula containing group-level effects to be considered in the prediction. If NULL (default), include all group-level effects; if NA, include no group-level effects.<br />
+<code>allow_new_levels</code><br />
+A flag indicating if new levels of group-level effects are allowed (defaults to FALSE). Only relevant if <code>newdata</code> is provided.</p>
+</blockquote>
+<p>When I first read this, I didn’t understand the word “include”. How does that map on to McElreath’s three cases above? Could not all three be said to “include” the group-level effects, in one way or another? Curiouser: <code>re_formula</code> can be a formula (okay) or <code>NA</code> (loosely translated: nothing) or <code>NULL</code> (loosely translated: less than nothing). Curiouser still: <code>allow_new_levels</code> can be <code>TRUE</code> or <code>FALSE</code>. So that gives us six possible combinations of the two different arguments – or even more, if you consider that the formula could omit a random effect, but include others. But if you omit it, is that closer to the <code>NULL</code> or to the <code>NA</code> effect?</p>
+<p>A stormy sea indeed.</p>
+<p>Perhaps the best way to understand this is by demonstration! Fortunately the <a href="http://mjskay.github.io/tidybayes/articles/tidy-brms.html"><code>tidybayes</code> website</a> contains some code to build a simple, easy-to-play-with model that I used to help me study how this works:</p>
+</div>
+<div id="stepping-through-the-vignette-for-tidybayes" class="section level2">
+<h2>Stepping through the vignette for <code>tidybayes</code></h2>
+<p>We begin by sampling some data from five different “conditions”:</p>
+<pre class="r"><code>set.seed(5)
+n &lt;- 10
+n_condition &lt;- 5
+ABC &lt;-
+  data_frame(
+    condition = rep(c(&quot;A&quot;, &quot;B&quot;, &quot;C&quot;, &quot;D&quot;, &quot;E&quot;), n),
+    response = rnorm(n * 5, c(0, 1, 2, 1, -1), 0.5)
+  )
+
+ABC %&gt;%
+  ggplot(aes(y = condition, x = response)) +
+  geom_point(pch = 21, size = 4, stroke = 1.4, fill = &quot;#41b6c4&quot;)</code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/setup-vig-1.png" width="672" /></p>
+<p>And by fitting a model to these data, with varying intercepts for each group:</p>
+<pre class="r"><code>m &lt;- brm(
+  response ~ (1 | condition), data = ABC, 
+  control = list(adapt_delta = .99),
+  prior = c(
+    prior(normal(0, 1), class = Intercept),
+    prior(student_t(3, 0, 1), class = sd),
+    prior(student_t(3, 0, 1), class = sigma)
+  )
+)</code></pre>
+<p>An easy way to visualize these results is with a so-called “joyplot”<a href="#fn4" class="footnoteRef" id="fnref4"><sup>4</sup></a></p>
+<pre class="r"><code>ABC %&gt;%
+  data_grid(condition) %&gt;%
+  add_predicted_samples(m) %&gt;%
+  ggplot(aes(x = pred, y = condition)) +
+  geom_density_ridges(fill = &quot;#41b6c4&quot;) + 
+  theme_minimal()</code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/m_plot-1.png" width="672" /></p>
+<p>Alright. This used the simple vanilla option, <code>add_predicted_samples(m)</code>. This uses the default options for making predictions, which recall is “NULL (default), include all group-level effects”. If you set <code>add_predicted_samples(m, re_formula = NULL)</code> (try it!), you’ll get exactly the same figure.<br />
+So we can see that to “include” an effect is to take the actual estimated intercepts for each <em>specific group we studied</em> and use them to make new predictions for the same groups. This is <strong>Case 1</strong> from McElreath’s list (though in this case, because we only have groups and nothing else, Case 1 and 2 are the same).</p>
+<p>We can also say the <strong>exact same thing</strong> using a formula:</p>
+<pre class="r"><code>ABC %&gt;%
+  data_grid(condition) %&gt;%
+  add_predicted_samples(m, re_formula = ~(1|condition)) %&gt;%
+  ggplot(aes(x = pred, y = condition)) +
+  geom_density_ridges(fill = &quot;#41b6c4&quot;) +  
+  theme_minimal()</code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/m_re_condition-1.png" width="672" /></p>
+<p>That’s right, there are three ways to say the exact same thing: say nothing, say <code>NULL</code>, or say the original “random effects” formula<a href="#fn5" class="footnoteRef" id="fnref5"><sup>5</sup></a>. You go with what you feel in your heart is right, but I prefer the formula.<br />
+In all three cases, we are using the model to predict the means for the groups in our varying-intercepts model. This is what the documentation means by “including” these varying intercepts.</p>
+<div id="squishing-those-random-effects" class="section level3">
+<h3>Squishing those random effects</h3>
+<p>OK so that was three separate ways to make predictions for the <em>same</em> groups. What else can we do? Let’s try that thing with the <code>NA</code> argument, which means “include no group-level effects”:</p>
+<pre class="r"><code>ABC %&gt;%
+  data_grid(condition) %&gt;%
+  add_predicted_samples(m, re_formula = NA,
+                        n = 2000) %&gt;%
+  ggplot(aes(x = pred, y = condition)) +
+  geom_density_ridges(fill = &quot;#41b6c4&quot;) +    theme_minimal()</code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/m_plot_NA_TRUE-and_zero-1.png" width="672" /></p>
+<p>Ah, so if you do this, all the groups come out the same! But if they’re all the same, what do they represent? It seems reasonable that they represent the model’s intercept, as if the varying intercepts were all 0. Let’s calculate predicitons that ignore the varying effects – that is, using only the model intercept and the standard deviation of the response – using a bit of handy <code>purrr</code> magic:</p>
+<pre class="r"><code>m %&gt;% 
+  spread_samples(b_Intercept, sigma) %&gt;% 
+  mutate(prediction = map2_dbl(b_Intercept, sigma, ~ rnorm(1, mean = .x, sd = .y)),
+         Prediction = &quot;prediction&quot;) %&gt;% #glimpse %&gt;% 
+  ggplot(aes(x = prediction, y = Prediction)) +
+  geom_density_ridges(fill = &quot;#41b6c4&quot;) +    
+  theme_minimal()</code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>As you can see, this distribution has exactly the same shape as the five in the previous figure! It is as if we calculated the predictions for a group which was exactly at the average (in other words, it had a varying intercept of 0.) In the Rethinking book, readers are taught to do this in a much more explicit way: you actually generate all the 0 intercepts yourself, and give that to the model in place of the estimated intercepts! A very manual and concrete way to “set something to 0”.</p>
+<p><code>brms</code> does this too. As the documentation says &gt;NA values within factors in newdata, are interpreted as if all dummy variables of this factor are zero.</p>
+<p>The <code>brms</code> phrasing certainly takes less space, though it also requires you to remember that this is what NA gets you!</p>
+<p>We can also remove random effects from our predictions by excluding them from the <code>re_formula</code>. In our model, we have only one varying effect – yet an even simpler formula is possible, a model with no intercept at all:</p>
+<pre class="r"><code>ABC %&gt;%
+  data_grid(condition) %&gt;%
+  add_predicted_samples(m, re_formula = ~ 0,
+                        n = 2000) %&gt;%
+  ggplot(aes(x = pred, y = condition)) +
+  geom_density_ridges(fill = &quot;#41b6c4&quot;) + theme_minimal() </code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p>Once again, the same distribution appears: it is as if all group effects had been set to zero. If we had two random effects and omitted one, this is what we would get for the omitted effect – the expected value if all its effects were 0.</p>
+</div>
+<div id="new-levels" class="section level3">
+<h3>New levels</h3>
+<p>I’m going to show how to create predictions for new levels, but first I’m going to show two mistakes that I made frequently while learning:</p>
+<p>First, asking for new levels without specifying <code>allow_new_levels = TRUE</code>:</p>
+<pre class="r"><code># this does not work at all!!
+data_frame(condition = &quot;bugaboo&quot;) %&gt;%
+  add_predicted_samples(m, re_formula = ~(1|condition),
+                        n = 2000) %&gt;%
+  ggplot(aes(x = pred, y = condition)) +
+  geom_density_ridges(fill = &quot;#41b6c4&quot;) +    theme_minimal()</code></pre>
+<pre><code>## Error: Levels &#39;bugaboo&#39; of grouping factor &#39;condition&#39; cannot be found in the fitted model. Consider setting argument &#39;allow_new_levels&#39; to TRUE.</code></pre>
+<p>That fails because I tried to pass in a level of my grouping variable that <em>wasn’t</em> in the original model!</p>
+<p>Second, passing in new levels – but telling the function to just ignore them:</p>
+<pre class="r"><code>data_frame(condition = &quot;bugaboo&quot;) %&gt;%
+  add_predicted_samples(m, re_formula = NA,#~(1|condition),
+                        n = 2000) %&gt;%
+  ggplot(aes(x = pred, y = condition)) +
+  geom_density_ridges(fill = &quot;#41b6c4&quot;) +    theme_minimal()</code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/m_data_NA-1.png" width="672" /> Here, i’m still passing in the unknown level – but the function doesn’t complain, because I’m not including random effects at all! This is the same result from above, when we used <code>NA</code> or <code>~0</code> to remove varying effects altogether. This is definitely something to watch for if you are passing in new data (I made this mistake, and it cost me an afternoon!)</p>
+<p>If we avoid both of these errors, we get what we expect: our means for our original groups, and a new predicted mean for <code>&quot;bugaboo&quot;</code>:</p>
+<pre class="r"><code>ABC %&gt;%
+  data_grid(condition) %&gt;% 
+  add_row(condition = &quot;bugaboo&quot;) %&gt;%
+  add_predicted_samples(m, re_formula = ~(1|condition),
+                        allow_new_levels = TRUE,
+                        n = 2000) %&gt;%
+  ggplot(aes(x = pred, y = condition)) +
+  geom_density_ridges(fill = &quot;#41b6c4&quot;) +    theme_minimal()</code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/new_level-1.png" width="672" /></p>
+<p>Here you can see that the new level is much flatter than the other original five. It comes from the same population as the others, which is rather variable (the group means are sort of different to each other). As a result, this new distribution is quite wide, including all that uncertainty.</p>
+<p>An ecologist might do something like this if we were had data on <em>some</em> species in a community, but wanted to make predictions for new, as yet unobserved, species we might find next year.</p>
+</div>
+<div id="more-than-one-group-experiment-with-chimps" class="section level3">
+<h3>More than one group: experiment with chimps</h3>
+<p>In my last, much longer demonstration I’m going to reproduce figure 12.5 from Stastical Rethinking. This figure plots the results of an experiment involving different individual chimps (actors) who experience different treatments. The experiment also contains blocks, and the model fits varying intercepts for both actors and blocks. Variation among actors is quite considerable, and the figure demos three ways to display this: First, the expected mean for the average actor, then the prediction for a new actor, and finally 50 new simulated actors. This code puts together all the things I’ve talked about so far, and assembles the figure with the hot new <a href="https://github.com/thomasp85/patchwork"><code>patchwork</code></a> package by Thomas Lin Pedersen!</p>
+<pre class="r"><code>data(&quot;chimpanzees&quot;, package = &quot;rethinking&quot;)
+
+chimp_bf &lt;- bf(pulled_left ~ 0 + intercept + prosoc_left + condition:prosoc_left + (1|actor) + (1|block),family = &quot;bernoulli&quot;)
+
+# get_prior(chimp_bf, chimpanzees)
+
+chimp_priors &lt;- priors &lt;- c(set_prior(&quot;normal(0, 10)&quot;, class = &quot;b&quot;),
+            set_prior(&quot;cauchy(0, 1)&quot;, class = &quot;sd&quot;))
+
+chimp_brms &lt;- brm(chimp_bf, prior = chimp_priors, data = chimpanzees)</code></pre>
+<pre><code>## 
+## SAMPLING FOR MODEL &#39;bernoulli brms-model&#39; NOW (CHAIN 1).
+## 
+## Gradient evaluation took 0.000267 seconds
+## 1000 transitions using 10 leapfrog steps per transition would take 2.67 seconds.
+## Adjust your expectations accordingly!
+## 
+## 
+## Iteration:    1 / 2000 [  0%]  (Warmup)
+## Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Iteration: 2000 / 2000 [100%]  (Sampling)
+## 
+##  Elapsed Time: 3.12877 seconds (Warm-up)
+##                3.58898 seconds (Sampling)
+##                6.71774 seconds (Total)
+## 
+## 
+## SAMPLING FOR MODEL &#39;bernoulli brms-model&#39; NOW (CHAIN 2).
+## 
+## Gradient evaluation took 0.000129 seconds
+## 1000 transitions using 10 leapfrog steps per transition would take 1.29 seconds.
+## Adjust your expectations accordingly!
+## 
+## 
+## Iteration:    1 / 2000 [  0%]  (Warmup)
+## Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Iteration: 2000 / 2000 [100%]  (Sampling)
+## 
+##  Elapsed Time: 3.02462 seconds (Warm-up)
+##                3.4744 seconds (Sampling)
+##                6.49902 seconds (Total)
+## 
+## 
+## SAMPLING FOR MODEL &#39;bernoulli brms-model&#39; NOW (CHAIN 3).
+## 
+## Gradient evaluation took 7.4e-05 seconds
+## 1000 transitions using 10 leapfrog steps per transition would take 0.74 seconds.
+## Adjust your expectations accordingly!
+## 
+## 
+## Iteration:    1 / 2000 [  0%]  (Warmup)
+## Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Iteration: 2000 / 2000 [100%]  (Sampling)
+## 
+##  Elapsed Time: 3.06995 seconds (Warm-up)
+##                2.88754 seconds (Sampling)
+##                5.95749 seconds (Total)
+## 
+## 
+## SAMPLING FOR MODEL &#39;bernoulli brms-model&#39; NOW (CHAIN 4).
+## 
+## Gradient evaluation took 0.000103 seconds
+## 1000 transitions using 10 leapfrog steps per transition would take 1.03 seconds.
+## Adjust your expectations accordingly!
+## 
+## 
+## Iteration:    1 / 2000 [  0%]  (Warmup)
+## Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Iteration: 2000 / 2000 [100%]  (Sampling)
+## 
+##  Elapsed Time: 3.14467 seconds (Warm-up)
+##                2.97509 seconds (Sampling)
+##                6.11976 seconds (Total)</code></pre>
+<pre class="r"><code>post_process &lt;- . %&gt;% 
+  mean_qi(.prob = 0.8) %&gt;% 
+  unite(combo, prosoc_left, condition, sep = &quot;/&quot;) %&gt;% 
+  ungroup %&gt;% 
+  mutate(combo = factor(combo, levels = c(&quot;0/0&quot;, &quot;1/0&quot;, &quot;0/1&quot;, &quot;1/1&quot;)))
+
+# the average actor
+avg_chimp &lt;- chimpanzees %&gt;% 
+  data_grid(prosoc_left, condition) %&gt;% 
+  # NA ==&gt; average actor
+  tidybayes::add_fitted_samples(model = chimp_brms, re_formula = NA) %&gt;% 
+  post_process
+
+
+plot_avg_chimp &lt;- avg_chimp %&gt;% 
+  ggplot(aes(x = combo, group = 1, y = estimate, ymin = conf.low, ymax = conf.high)) + 
+  geom_ribbon(fill = &quot;#78c679&quot;) + 
+  geom_line() + 
+  ylim(c(0, 1)) + 
+  theme_minimal() + 
+  labs(title = &quot;Average actor&quot;, 
+       x = &quot;&quot;)
+
+# marginal of chimp
+
+marginal_chimp &lt;- chimpanzees %&gt;% 
+  data_grid(prosoc_left, condition) %&gt;% 
+  # leave out part of the random effects formula == replace that part with all 0s
+  tidybayes::add_fitted_samples(model = chimp_brms,
+                                allow_new_levels = TRUE,
+                                re_formula = ~
+                                  (1|actor)# + 
+                                  # (1|block)
+                                ) %&gt;% 
+  post_process()
+
+plot_marginal_chimps &lt;- marginal_chimp %&gt;% 
+  ggplot(aes(x = combo, group = 1, y = estimate, ymin = conf.low, ymax = conf.high)) + 
+  geom_ribbon(fill = &quot;#78c679&quot;) + 
+  geom_line() + 
+  ylim(c(0, 1)) + 
+  theme_minimal()+ 
+  labs(title = &quot;Marginal of actor&quot;, 
+       x = &quot;&quot;)
+
+# 50 simulated chimps
+
+plot_fifty_chimps &lt;- chimpanzees %&gt;% 
+  data_grid(prosoc_left, condition) %&gt;% 
+  # NA ==&gt; average actor
+  tidybayes::add_fitted_samples(model = chimp_brms,
+                                allow_new_levels = TRUE,
+                                n = 50,
+                                re_formula = ~
+                                  (1|actor)# + 
+                                  # (1|block)
+                                ) %&gt;% 
+  unite(combo, prosoc_left, condition, sep = &quot;/&quot;) %&gt;% 
+  ungroup %&gt;% 
+  mutate(combo = factor(combo, levels = c(&quot;0/0&quot;, &quot;1/0&quot;, &quot;0/1&quot;, &quot;1/1&quot;))) %&gt;% 
+  ggplot(aes(x = combo, group = .iteration, y = estimate)) + 
+  geom_line(alpha = 0.7) + 
+  ylim(c(0, 1)) + 
+  theme_minimal()+ 
+  labs(title = &quot;50 simulated actors&quot;, 
+       x = &quot;&quot;)
+
+plot_avg_chimp + plot_marginal_chimps + plot_fifty_chimps</code></pre>
+<p><img src="/post/2018-02-13-easily-made-fitted-and-predicted-values-made-easy_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+</div>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Hi, Richard, if your reading this: huge fan here. I uh, really hope this doesn’t constitute some kind of copyright problem? If so just let me know and I’ll change it<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p><em>what we’d expect see in count data</em>, indeed. If you have ever seen count data in Nature that was <strong>actually</strong> distributed as a Poisson, please leave a comment in order to claim your prize!!<a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p>not without more information; that’s why overdispersion is sad – you needed more information<a href="#fnref3">↩</a></p></li>
+<li id="fn4"><p>in writing this I came to realize that <a href="http://serialmentor.com/blog/2017/9/15/goodbye-joyplots">joyplots are over; we do ridgelines now</a>. Also Claus Wilke is one hell of a blogger, definitely going to start reading him!<a href="#fnref4">↩</a></p></li>
+<li id="fn5"><p>this impulse in R to “help your users” by making it possible to say a great deal by saying almost nothing is… actually pretty counterproductive, I’d argue? But that’s a different post<a href="#fnref5">↩</a></p></li>
+</ol>
+</div>

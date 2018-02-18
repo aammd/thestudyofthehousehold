@@ -1,0 +1,56 @@
+---
+title: How I use Rmarkdown
+author: Andrew MacDonald
+date: '2018-02-09'
+slug: how-i-use-rmarkdown
+categories:
+  - R
+tags:
+  - rstats
+  - R Markdown
+  - free advice
+---
+
+
+
+<p>Last week or so, I achieved a wonderous thing. A trivial thing. I acheived a wondrous, trivial thing:</p>
+<p>I wrote my most popular tweet ever:</p>
+{{% tweet "956835956073615360" %}}
+<p>That’s right! Dr. MacDonald going viral on the internet by urging people to write.. bibliographies. I am a fancy <em>scholar</em>, you see. This sort of thing is our solemn duty!</p>
+<p>Anyway, this made me think a lot more about how I use Rmarkdown to write and talk about science.</p>
+<p>So here are three quick tips! This is not an introduction to R markdown; if you want that you should read <a href="https://rmarkdown.rstudio.com/">the wonderful website</a> devoted to it, or the <a href="https://github.com/yihui/knitr-book">book about knitr</a>.</p>
+<div id="use-the-setup-chunk" class="section level3">
+<h3>Use the <code>setup</code> chunk</h3>
+<p>This is a basic sort of “workflow” hack. You name a chunk – usually the first – with “setup”, and you can run it in one click within Rstudio.</p>
+<div class="figure">
+<img src="/img/setupimg.png" alt="setup" />
+<p class="caption">setup</p>
+</div>
+<p>This is a great place to load your libraries and your data, of course. But lately I’ve been developing mine more and more. I write short functions, define the options for all other chunks, and modify or reshape data. basically whatever subsequent chunks will need to run, I do it here. That way, every chunk that comes after depends (mostly) on only one other – the <code>setup</code> chunk. This makes it easy to jump in and start working.</p>
+<p>Of course, some chunks end up depending on each other. For example, I might fit a model in one chunk and spend the next few chunks visualizing it in different ways. But lately I’ve started even trying to move these dependencies into <code>setup</code>. When I fit a model that takes a while to run, I often save the output into an RDS file, and load it in the setup chunk. That way I don’t have to run the chunk that fits the model; I usually set <code>eval = FALSE</code> in that chunk’s options.</p>
+<p>You can of course get much more elaborate! Maëlle Salmon in her blog on whether chunks are <a href="http://www.masalmon.eu/2017/08/08/chunkpets/">pets or livestock</a> references this <a href="https://twitter.com/drob/status/738786604731490304">Twitter thread by David Robinson</a> which is all about different strategies for defining dependencies. You can define dependencies among chunks with <code>autodep</code> or the <code>dependson</code> chunk options, which is pretty cool!</p>
+</div>
+<div id="embrace-the-table-of-contents" class="section level3">
+<h3>Embrace the Table of Contents</h3>
+<p>Another great reason to name your chunks cool things is the Rstudio automatic table of contents. You get it by clicking on a the top right of your Rmd editing window, OR on the list on the bottom left! They really <em>really</em> want you to feel organized and good about yourself over at Rstudio.</p>
+<p>These table of contents have a great little nested structure. It shows you your document headings, your chunk labels, any sections inside your chunks, and then your functions. This makes it easy to jump around and gives you a sense of control over your life. Data analysis is confusing enough without making yourself suffer; embrace easy structure.</p>
+<div class="figure">
+<img src="/img/toc.png" alt="toc" />
+<p class="caption">toc</p>
+</div>
+<p>Perhaps it is a little weird that I use code sections <em>inside</em> of chunks, but it does seem to work! You do it like this:</p>
+<pre class="r"><code># load libraries ---------------
+library(tidyverse)
+# read data --------------------
+latest_results &lt;- readr::read_csv(&quot;data/mmm_hot_fresh_data.csv&quot;)</code></pre>
+<p>That’s it! Any comment that ends in multiple <code>-----</code> characters is interpreted as a section header. This One Weird Trick works in R scripts, too!</p>
+</div>
+<div id="rmd-is-where-you-live-now" class="section level3">
+<h3>Rmd is where you live now</h3>
+<p>For me, for many scientists, writing R code is a hedonistically artistic, left-brained, paint-in-your-hair sort of experience. Many ecologists learn how to code the same way we learned how to catch salamanders as children – trial and error, flipping over rocks till we get a reward. This is right and good. The world is too full of living things for biologists to also be amazing programmers.<br />
+However, once the ecstasy of creation has swept over us, we awake late the next morning to find our canvas covered with 2100 lines of R code and object names like <code>model_17</code> and <code>new_fixed_data</code>. Heads throbbing with a statistical absinthe hangover, we trudge through it slowly over days, trying to figure out what we did.</p>
+<p>Like all art, after creation comes editing. Make your editing easy! Write in <code>.Rmd</code>. Scribble, scratch out, try some models that turn out to be garbage and set <code>eval=FALSE</code> on those chunks. Re-knit regularly to make sure that everything still works. If you have an <code>.Rmd</code> file that will actually knit and produce output, then you have hope. You know that it is <em>possible</em> to retrace what you did.</p>
+{{% tweet "953624238266646529" %}}
+<p>You can always create an elaborate reproducible workflow later, with Make, Drake, Remake, Snakemake or your whichever .*ake you most love. This is the <a href="https://edwinth.github.io/blog/workflow/">two-stage workflow</a> some Data Scientists prefer.</p>
+<p>Introduce a few helpful habits into your writing! Write in Rmarkdown, keep it organized, and allow yourself to relax and focus on your science! Happy writing :)</p>
+</div>

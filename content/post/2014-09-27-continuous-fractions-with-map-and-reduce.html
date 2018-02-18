@@ -1,0 +1,133 @@
+---
+title: Continuous fractions with Map and Reduce
+author: Andrew MacDonald
+date: '2014-09-27'
+slug: continuous-fractions-with-map-and-reduce
+categories:
+  - R
+tags:
+  - rstats
+---
+
+
+
+<p>Over the summer, some of us here at UBC started a <a href="https://github.com/aammd/UBCadv-r">reading group</a> based around Hadley Wickham’s book, <a href="http://adv-r.had.co.nz/">Advanced R Programming</a>. The goal was to compare our answers to the exercises and our impressions of the content.</p>
+<p>We recently read my favourite chapter, <a href="http://adv-r.had.co.nz/Functionals.html">Functionals</a>, where readers are challenged to read about some algorithms in <a href="http://mitpress.mit.edu/sicp/full-text/book/book-Z-H-12.html#%_sec_1.3">Structure and Interpretation of Computer Programs</a>, and implement it in R.</p>
+<p>I wanted to share some functions I wrote to calculate these exotic things called <em>k-term finite continued fractions</em>, based on that challenge:</p>
+<div id="continued-fractions" class="section level2">
+<h2>continued fractions</h2>
+<p><a href="http://en.wikipedia.org/wiki/Generalized_continued_fraction">Continued Fractions</a> look like this:</p>
+<p><span class="math display">\[
+\frac{n_1}{d_1 + \frac{n_2}{d_2 + \frac{n_3}{d_3 + \cdots } } }
+\]</span></p>
+<p>and have an infinite number of <span class="math inline">\(n\)</span> and <span class="math inline">\(d\)</span> values. However, if after <span class="math inline">\(k\)</span> values you just replace the remaining ones (the <span class="math inline">\(...\)</span> above) with 0, then you get a <em>k-term finite continued fraction</em>, which is maybe close enough:</p>
+<p><span class="math display">\[
+\frac{n_1}{d_1  + \frac{n_2}{\ddots + \frac{n_k}{d_k}}}
+\]</span></p>
+<p>Continued fractions have the values of <span class="math inline">\(n\)</span> and <span class="math inline">\(d\)</span> defined by a series. We need a function that will take the series for the numerator and denominator, calculate <span class="math inline">\(k\)</span> terms, and put them together into a continued fraction.</p>
+<p>So, how do we calculate this in R? Well, it turns out we can apply two concepts we learned from Wickham’s book to do so: closures and functionals.</p>
+<div id="creating-a-series-of-closures" class="section level3">
+<h3>Creating a series of closures</h3>
+<p>We could say that each “part” of the continued fraction was a unit that looks like</p>
+<p><span class="math display">\[
+\frac{n}{d + x}
+\]</span></p>
+<p>where <span class="math inline">\(n\)</span> and <span class="math inline">\(d\)</span> are a “pair” of numerator and denominator, and <span class="math inline">\(x\)</span> is the next “part”, and so on. (there are probably mathematical terms for these, but <a href="http://en.memory-alpha.org/wiki/I%27m_a_doctor,_not_a...">I’m an ecologist, not a mathematician!</a>). If you “build” the continued fraction from the inside out, you’d start with <span class="math inline">\(x = 0\)</span>, and calculate <span class="math inline">\(\frac{n_k}{d_k}\)</span>. Then you move on to <span class="math inline">\(n_{k-1}\)</span>; for this fraction you have the numerator-denominator pair, plus the term (<span class="math inline">\(x\)</span>) which you just calculated.</p>
+<p>We can use closures to calculate each of these “parts” in turn, in order to keep the numerator-denominator pairs together. Closures are functions which are created by other functions; they “enclose” the environment in which they were created (hence the name), which means they can use variables from that environment (in our case, the values of a numerator &amp; denominator)</p>
+<p>First, we make a “function factory”, a function which creates other functions (closures which retain different values of <span class="math inline">\(n\)</span> and <span class="math inline">\(d\)</span>):</p>
+<pre class="r"><code>frac_maker &lt;- function(n, d){
+  force(n)
+  force(d)
+  function(x) n / (d + x)
+  }</code></pre>
+<p>This function takes a pair of numbers and defines a new function which uses them. But how can we create lots of closures, one for every numerator-denominator “pair” between 1 and <span class="math inline">\(k\)</span>? We can use the function <code>Map</code> to run this function on each variable pair. <code>Map</code> works like a zipper, combining the first elements of two (or more) vectors with a function, then the second, etc. For example, the reciprocal of the <a href="http://en.wikipedia.org/wiki/Golden_ratio">Golden Ratio</a> is the result of a continued fraction where <span class="math inline">\(n\)</span> and <span class="math inline">\(d\)</span> are both 1:</p>
+<pre class="r"><code>  Ns &lt;- rep(1, 20)
+  Ds &lt;- rep(1, 20)
+  funs &lt;- Map(frac_maker, Ns, Ds)</code></pre>
+<p><code>funs</code> is now a list of functions, each one remembering its own particular value of <span class="math inline">\(n\)</span> or <span class="math inline">\(d\)</span>. Now all we need to do is put them together and run them all. For that, we need another functional: <code>Reduce</code>.</p>
+</div>
+</div>
+<div id="using-reduce" class="section level2">
+<h2>using <code>Reduce</code></h2>
+<p><code>Reduce</code> is just lovely. It takes a vector and “reduces” it to a single number by applying a function: the first two arguments are the first and second vector elements, then the result of that calculation and the third element, then that result and the fourth element:</p>
+<pre><code>Reduce(sum, c(1, 2, 3, 4)) = sum(sum(sum(1, 2), 3), 4)</code></pre>
+<p>Here we have a list of functions, not values, so we use <code>Reduce</code> to run a function that simply executes its second argument on its first:</p>
+<pre class="r"><code>answer &lt;- Reduce(function(f1,f2) f2(f1), x = funs, init = 0)
+## take reciprocal to get the Golden Ratio:
+1/answer</code></pre>
+<pre><code>## [1] 1.618034</code></pre>
+<p>We start with the value of 0, because as we said the approximation of the continuous fraction simply replaces all the the “parts” after <span class="math inline">\(k\)</span> with 0. So our function runs the first function on 0, the second function on that result, the third function on that result, etc. The result is the whole approximation of a continuous fraction, “built” from the inside out.</p>
+</div>
+<div id="combine-into-a-function" class="section level2">
+<h2>combine into a function</h2>
+<p>So now we combine this to form a single function that calculates the value of a continuous series for <span class="math inline">\(k\)</span> terms:</p>
+<pre class="r"><code>continuous_frac &lt;- function(Ns, Ds, frac_fun = frac_maker){
+  Ns &lt;- rev(Ns)
+  Ds &lt;- rev(Ds)
+  funs &lt;- Map(frac_fun, Ns, Ds)
+  Reduce(function(f1,f2) f2(f1), x = funs, init = 0)
+  }</code></pre>
+<p>Note that we have to reverse the series <code>Ns</code> and <code>Ds</code>, simply because the series are usually defined from <span class="math inline">\(n_1\)</span> to <span class="math inline">\(n_k\)</span>, but we are building our function from <span class="math inline">\(n_k\)</span> backwards.</p>
+</div>
+<div id="calculating-numbers" class="section level2">
+<h2>calculating numbers</h2>
+<p>With this function in hand, we can approximate any continued fraction. Here are a few examples:</p>
+<div id="the-value-of-e-for-biological-content" class="section level3">
+<h3>The value of <span class="math inline">\(e\)</span> (for biological content)</h3>
+<p>Are you wondering what all this has to do with biology? Well, Euler’s number certainly appears in plenty of biological models, so let’s calculate it:</p>
+<pre class="r"><code>denominator &lt;- function(k){
+  nums &lt;- lapply(seq_len(k)*2, function(x) c(1, 1, x))
+  out &lt;- do.call(c, nums)
+  out[-1]
+}
+
+2 + continuous_frac(Ds = denominator(20), Ns = rep(1, 3 * 20 -1))</code></pre>
+<pre><code>## [1] 2.718282</code></pre>
+</div>
+</div>
+<div id="calculating-pi" class="section level2">
+<h2>calculating <code>pi</code></h2>
+<p>There are several ways to calculate <span class="math inline">\(\pi\)</span>, based on different forms of this equation. Apparently they converge at different rates. here are some examples:</p>
+<pre class="r"><code>leibniz &lt;- function(k){
+  seqs &lt;- seq(from = 1, by = 2, length.out = k -1)
+  N &lt;- c(4, seqs ^ 2)
+  D &lt;- c(1, rep(2, k-1))
+  continuous_frac(N, D)
+}
+
+somayaji &lt;- function(k){
+  N &lt;- seq(from = 1, by = 2, length.out = k) ^ 2
+  D &lt;- rep(6, k)
+  3 + continuous_frac(N, D)
+}
+
+linear &lt;- function(k){
+  N &lt;- seq(from = 1, by = 1, length.out = k -1) ^ 2
+  N &lt;- c(4, N)
+  D &lt;- seq(from = 1, by = 2, length.out = k)
+  continuous_frac(N, D)
+}
+
+library(dplyr)</code></pre>
+<pre><code>## Warning: package &#39;dplyr&#39; was built under R version 3.4.2</code></pre>
+<pre class="r"><code>library(tidyr)</code></pre>
+<pre><code>## Warning: package &#39;tidyr&#39; was built under R version 3.4.3</code></pre>
+<pre class="r"><code>library(ggplot2)
+
+data.frame(ks = seq(2, 100, by = 5)) %&gt;%
+  rowwise %&gt;%
+  mutate(leibniz = leibniz(ks),
+         somayaji = somayaji(ks),
+         linear = linear(ks)) %&gt;%
+  gather(method, pi_value, -ks) %&gt;%
+  ggplot(aes(x = ks, y = pi_value, colour = method)) + geom_point() + geom_path() + theme_bw()</code></pre>
+<p><img src="/post/2014-09-27-continuous-fractions-with-map-and-reduce_files/figure-html/picomparion-1.png" width="672" /></p>
+<p>If we zoom in we can see that the third form outperforms Somayaji’s:</p>
+<pre class="r"><code>data.frame(ks = seq(5, 10, by = 1)) %&gt;%
+  rowwise %&gt;%
+  mutate(somayaji = somayaji(ks),
+         linear = linear(ks)) %&gt;%
+  gather(method, pi_value, -ks) %&gt;%
+  ggplot(aes(x = ks, y = pi_value, colour = method)) + geom_point() + geom_path() + xlab(&quot;k&quot;) + ylab(expression(pi)) + theme_bw()</code></pre>
+<p><img src="/post/2014-09-27-continuous-fractions-with-map-and-reduce_files/figure-html/piplot-1.png" width="672" /></p>
+</div>

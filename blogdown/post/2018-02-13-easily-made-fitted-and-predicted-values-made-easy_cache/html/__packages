@@ -1,0 +1,15 @@
+base
+Rcpp
+ggplot2
+brms
+tidybayes
+tidyverse
+tibble
+tidyr
+readr
+purrr
+dplyr
+modelr
+ggridges
+patchwork
+bindrcpp

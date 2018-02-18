@@ -1,0 +1,126 @@
+---
+title: "Population growth with functional programming"
+author: "Andrew MacDonald"
+date: 2016-12-07
+categories: ["R"]
+tags: ["R Markdown", "plot", "simulation"]
+---
+
+
+
+<p>Today I want to tell you about an approach for <strong>functional programming</strong> in R – and then apply it to studying population growth!</p>
+<p>I have been studying some of the <code>purrr</code> functions lately. They are a useful family of functions for performing two common tasks in R: manipulating lists and altering the behaviour of functions. If you’d like a high-quality guide to this group of functions, set aside some time to work through Jenny Bryan’s <a href="https://jennybc.github.io/purrr-tutorial/index.html">excellent tutorial</a> and Hadley Wickham’s <a href="http://r4ds.had.co.nz/lists.html">chapter on Lists</a>.</p>
+<p>I was inspired to write this post after reading <a href="http://stackoverflow.com/questions/40095463/simulating-a-timeseries-in-dplyr-instead-of-using-a-for-loop">This StackOverflow question</a> by jebyrnes. He asks:</p>
+<blockquote>
+<p>I want to simulate a timeseries of something like population growth. […] I feel like there has to be a dplyr or tidyverse way to do this (as much as I love my for loop).</p>
+</blockquote>
+<p>and there is! An answerer mentioned <code>purr::accumulate()</code>. In this post I’m going to expand on the approach they suggest. <code>accumulate</code>, and its twin <code>reduce</code>, are examples of <em>functionals</em> – functions that take functions as their arguments, and manipulate their behaviour in some way. <code>purrr::accumulate</code> is a wrapper around to <code>Reduce</code> from the base package, with the argument <code>accumulate = TRUE</code>.</p>
+<p><code>accumulate</code> is normally used when you want to do some cumulative function all along a vector. For example, we can reproduce the cumulative some of a vector like this (same output as <code>cumsum(1:10))</code></p>
+<pre class="r"><code>library(purrr)</code></pre>
+<pre><code>## Warning: package &#39;purrr&#39; was built under R version 3.4.2</code></pre>
+<pre class="r"><code>accumulate(1:10, ~ .x + .y)</code></pre>
+<pre><code>##  [1]  1  3  6 10 15 21 28 36 45 55</code></pre>
+<p><code>.x</code> and <code>.y</code> here are just a handy way of writing “the first thing” and “the second thing”. Then accumulate goes down the vector <code>1:10</code>, and takes the first thing (<code>1</code>) adds it to the second thing (<code>2</code>) and so on….</p>
+<p>However, this is not the only way it works! <code>accumulate</code> can take an initial value (<code>.init</code>) and can work on a dummy variable. If its starting function does nothing but modify an element, it will just keep modifying it: so instead of <code>f(1, 2), f(f(1, 2), 3)</code> we get <code>f(.init), f(f(.init))</code> etc:</p>
+<pre class="r"><code>dummy &lt;- numeric(10)
+dummy</code></pre>
+<pre><code>##  [1] 0 0 0 0 0 0 0 0 0 0</code></pre>
+<pre class="r"><code>accumulate(dummy, ~ .* 1.5, .init = 50)</code></pre>
+<pre><code>##  [1]   50.0000   75.0000  112.5000  168.7500  253.1250  379.6875  569.5312
+##  [8]  854.2969 1281.4453 1922.1680 2883.2520</code></pre>
+<p>Clearly, the <code>0</code>s are not involved in any calculation (the answer would be <code>0</code>!). instead, you just get the starting value multiplied by <code>1.5</code> each time!</p>
+<p>This already suggests an awesome biological interpretation: logistic population growth.</p>
+<pre class="r"><code>pop_size &lt;- accumulate(dummy, ~ .* 1.5, .init = 50)
+library(ggplot2)
+library(dplyr)</code></pre>
+<pre><code>## Warning: package &#39;dplyr&#39; was built under R version 3.4.2</code></pre>
+<pre class="r"><code>data_frame(time = 1:11, pop_size) %&gt;% 
+  ggplot(aes(x = time, y = pop_size)) + 
+  geom_point() + geom_line()</code></pre>
+<p><img src="/post/2016-12-07-time-series-simulation_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>On thing I like about this is that is is to much easier to look at – it look like the common biological equation for population growth:</p>
+<p><span class="math display">\[
+N_{t+1} = r*N_t 
+\]</span></p>
+<div id="stochastic-population-growth" class="section level3">
+<h3>Stochastic population growth</h3>
+<p>In the original question, <a href="http://stackoverflow.com/questions/40095463/simulating-a-timeseries-in-dplyr-instead-of-using-a-for-loop#comment67489125_40096347">jebyrnes asked</a> if parameters could be allowed to vary over time. Here is a way of allowing that to happen. We have to get a bit more abstract, and write a function which takes both population growth rate <code>lambda</code> and the population at time N<sub>t</sub> as inputs</p>
+<pre class="r"><code>exp_growth &lt;- function(lambda, Nt) lambda * Nt 
+
+set.seed(2016-12-01)
+pop_functions &lt;- data_frame(time    = 1:20, 
+                            lambda_con = 1.12,
+                            lambda_var  = 1.12 + rnorm(20, 0, 0.2)) %&gt;% 
+  # make a list of functions
+  mutate(fns_con = map(lambda_con, ~ partial(exp_growth, lambda = .x, .lazy = FALSE)),
+         fns_var = map(lambda_var, ~ partial(exp_growth, lambda = .x, .lazy = FALSE)))
+
+head(pop_functions)</code></pre>
+<pre><code>## # A tibble: 6 x 5
+##    time lambda_con lambda_var fns_con fns_var
+##   &lt;int&gt;      &lt;dbl&gt;      &lt;dbl&gt; &lt;list&gt;  &lt;list&gt; 
+## 1     1       1.12      1.40  &lt;fn&gt;    &lt;fn&gt;   
+## 2     2       1.12      0.974 &lt;fn&gt;    &lt;fn&gt;   
+## 3     3       1.12      1.07  &lt;fn&gt;    &lt;fn&gt;   
+## 4     4       1.12      1.33  &lt;fn&gt;    &lt;fn&gt;   
+## 5     5       1.12      1.26  &lt;fn&gt;    &lt;fn&gt;   
+## 6     6       1.12      0.859 &lt;fn&gt;    &lt;fn&gt;</code></pre>
+<p>Now we have, instead of one function, many tiny little functions which each convert between time steps. The function <code>purrr::partial()</code> is handy for _partial_ly filling in the arguments of a function. Here it sets the value of the population growth rate between generations (<code>lambda</code>), and leaves us with a function that only needs one value, the population size.</p>
+<p>How do we run these little functions? We need yet another function – this time, a function that takes two functions and <em>runs the second on the first</em>:</p>
+<pre class="r"><code>run_both &lt;- function(.x, .y) .y(.x)</code></pre>
+<p>Applying this function will let us run all the functions held in <code>pop_functions</code>. All we need to supply is the starting number of individuals for each population:</p>
+<pre class="r"><code>simulated_growth &lt;- pop_functions %&gt;% 
+  mutate(pops_con = accumulate(fns_con, run_both, .init = 10)[-1],
+         pops_var = accumulate(fns_var, run_both, .init = 10)[-1])
+
+simulated_growth %&gt;% 
+  select(time, starts_with(&quot;pops&quot;)) %&gt;% 
+  tidyr::gather(&quot;growthtype&quot;, &quot;size&quot;, -time) %&gt;% 
+  ggplot(aes(x = time, y = size, colour = growthtype)) + geom_line()</code></pre>
+<p><img src="/post/2016-12-07-time-series-simulation_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<pre class="r"><code>rerun(40, {data_frame(time    = 1:20, 
+                  lambda_var  = 1.12 + rnorm(20, 0, 0.1)) %&gt;% 
+    # make a list of functions
+    mutate(fns_var = map(lambda_var, ~ partial(exp_growth, lambda = .x, .lazy = FALSE)),
+           pops_var = accumulate(fns_var, run_both, .init = 10)[-1]) %&gt;% 
+    select(time,lambda_var, pops_var)}) %&gt;% 
+  bind_rows(.id = &quot;sim&quot;) %&gt;% 
+  ggplot(aes(x = time, y = pops_var, group = sim)) + geom_line()</code></pre>
+<p><img src="/post/2016-12-07-time-series-simulation_files/figure-html/unnamed-chunk-7-2.png" width="672" /></p>
+</div>
+<div id="predators-and-prey" class="section level3">
+<h3>Predators and Prey</h3>
+<p>I found, to my delight, that this approach works for more complicated objects than mere single numbers. We can, for example track a pair of numbers – say, the abundances of a predator and a prey!</p>
+<p>I’m a community ecologist, and so my favourite bedtime story is the tale of the Logistically Growing Resource and the Predator:</p>
+<p><span class="math display">\[
+R_{t+1} = R_t \times (1 + r \times (1 - R_t/K)) - P \times a
+\]</span></p>
+<p><span class="math display">\[
+P_{t+1} = P_t \times (1 - m + c \times R_t \times a)
+\]</span></p>
+<pre class="r"><code>res_cons &lt;- function(vec, m, r, K, a, c){
+  out1 &lt;- vec[[&quot;res&quot;]] * (1 + r * (1 - vec[[&quot;res&quot;]] / K ) - vec[[&quot;con&quot;]] * a)
+  
+  out2 &lt;- vec[[&quot;con&quot;]] * (1 - m + c * vec[[&quot;res&quot;]] * a)
+  
+  c(&quot;res&quot; = out1, &quot;con&quot; = out2)
+}
+
+
+paper_mod &lt;- partial(res_cons, r = 1, K = 100, m = 0.21, c = 0.15, a = 0.032)
+
+library(tidyr)</code></pre>
+<pre><code>## Warning: package &#39;tidyr&#39; was built under R version 3.4.3</code></pre>
+<pre class="r"><code>accumulate(1:200, ~ paper_mod(.x), .init = c(&quot;res&quot; = 50, &quot;con&quot; = 1)) %&gt;% 
+  tibble::enframe(.) %&gt;% 
+  mutate(res = map_dbl(value, &quot;res&quot;),
+         con = map_dbl(value, &quot;con&quot;)) %&gt;% 
+  select(-value) %&gt;%
+  gather(trophic, abd, -name) %&gt;% 
+  ggplot(aes(x = name, y = abd, colour = trophic)) + geom_line()</code></pre>
+<p><img src="/post/2016-12-07-time-series-simulation_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+</div>
+<div id="so-is-this-useful" class="section level2">
+<h2>So, is this useful?</h2>
+<p>I wonder if this might be an interesting pedagogical tool. I feel like it might place the emphasis a bit differently to for-loops. Perhaps a for loop emphasizes the passage of time – how, at each time step (each <code>i</code> for example) certain things happen in a certain order (the Resource grows, the Predator kills some, then some predators die, etc). On the other hand, I feel like the functional programming approach emphasizes how a population (or pair of populations) is <em>transformed</em>. Each little function has some parameters – which are either, constant, varying, and/or influenced by something besides population size – and each little function does only one thing – transform the population between one time step and the next.</p>
+</div>

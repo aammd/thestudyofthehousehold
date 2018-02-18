@@ -1,0 +1,297 @@
+---
+title: A tidy game of life
+subtitle: Not truly a game, nor truly alive, nor very tidy
+author: Andrew MacDonald
+date: '2018-01-12'
+slug: a-tidy-game-of-life
+categories:
+  - R
+tags:
+  - rstats
+  - fun
+  - gif
+---
+
+
+
+<p>Ever since I moved to France for my postdoc in September 2016, I’ve tried to practice French whenever I can. One easy way to do that is by consuming YouTube channels in French – great things to put on the the background while I make food for my son, or feed my son, or clean up after feeding my son, etc.</p>
+<p>One of my favourite <em>chaînes de Youtube</em> is <a href="https://www.youtube.com/channel/UCaNlbnghtwlsGF-KzAFThqA">Science Etonnante</a>, by <a href="https://sciencetonnante.wordpress.com/">David Louapre</a>. Louapre is a charming and direct teacher, and the videos are well made. He’s discreet about himself (I had to google his name! All I knew about him is that he’s some kind of Physicist).</p>
+<p>Over Christmas break, I was infected with Louapre’s enthusiasm for a classic of computer simulations: Joseph Conway’s Game of Life. Here’s the video here:</p>
+<pre class="r"><code>library(blogdown)
+shortcode(&quot;youtube&quot;, &quot;S-W0NX97DB0&quot;)</code></pre>
+{{% youtube "S-W0NX97DB0" %}}
+<p>The video covers important and general topics, like the nature of Turing-completeness and what it means for a system to have chaotic dynamics. But mostly it consists of the host enthusing over particularly beautiful or surprising structures. This is the sort of thing that I find inspiring – so much of science is just play. Indeed the Game of Life seems full of evidence of scientists just having a good time creating interesting structures and watching them develop. They have amazing names like <a href="https://en.wikipedia.org/wiki/Gun_(cellular_automaton)">Gosper’s glider gun</a>, and their is a fascinating taxonomy of the stable structures that develop (Gliders, Loafs, Toads, etc etc).</p>
+<p>For those of you unfamiliar with the Game of Life, the rules are very simple indeed. First, you start with a grid of cells, on which some cells are “alive”. Normally, these get coloured black. The fate of any cell – alive or dead – is determined by the status of the 8 cells which surround it, its “neighbours”. There are only four rules (source: <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life#Rules">Wikipedia</a>:</p>
+<blockquote>
+<ol style="list-style-type: decimal">
+<li>Any live cell with fewer than two live neighbours dies, as if caused by underpopulation.</li>
+<li>Any live cell with two or three live neighbours lives on to the next generation.</li>
+<li>Any live cell with more than three live neighbours dies, as if by overpopulation.</li>
+<li>Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.</li>
+</ol>
+</blockquote>
+<p>So of course I thought I that I would try to simulate this myself, in R.</p>
+<div id="life-in-the-tidyverse" class="section level2">
+<h2>Life in the Tidyverse</h2>
+<p>The tool shapes the hand, and I’ve been working with the tidyverse for so long that it is easiest for me to think of problems in that way. So, in the hopes that I could solve this problem quickly, I set out to write a “tidy” approach to simulating the game of life!</p>
+<div id="starting-configuration" class="section level4">
+<h4>Starting configuration</h4>
+<p>I chose a simple starting configuration from the video – something that gives a brief but interesting sequence to a final stable state. It all starts with a simple 6-block staircase.</p>
+<pre class="r"><code>library(tidyverse)
+library(gganimate)
+
+knitr::opts_chunk$set(cache = TRUE)
+
+# create the grid
+space &lt;- expand.grid(r = 1:80, c = 1:80)
+
+# define starting position
+starting &lt;- frame_data(
+  ~r, ~c, ~v,
+  -1, -1, 1,
+  -1,  0, 1,
+   0,  0, 1,
+   0,  1, 1,
+   1,  1, 1,
+   1,  2, 1
+)
+
+starting &lt;- starting %&gt;% 
+  mutate(r = r + 40,
+         c = c + 40)
+
+start &lt;- left_join(space, starting) %&gt;% 
+  replace_na(list(v = 0))
+
+ggplot(start, aes(x = c, y = r, fill = as.factor(v))) + 
+  geom_tile(colour = &quot;lightgrey&quot;) + 
+  coord_fixed() +
+  scale_fill_manual(values = c(&quot;1&quot; = &quot;forestgreen&quot;, &quot;0&quot; = &quot;white&quot;)) + 
+  theme_void() + 
+  guides(fill=FALSE)</code></pre>
+<p><img src="/post/2018-01-12-a-tidy-game-of-life_files/figure-html/plotstart-1.png" width="672" /></p>
+<pre class="r"><code>appearance &lt;-  function(gg){
+  gg + 
+    geom_tile(colour = &quot;lightgrey&quot;) + 
+    coord_fixed() +
+    scale_fill_manual(values = c(&quot;1&quot; = &quot;forestgreen&quot;, &quot;0&quot; = &quot;white&quot;)) + 
+    theme_void() + 
+    guides(fill=FALSE)
+}</code></pre>
+<p>Thanks to the handy <code>frame_data()</code>, it’s very easy to just draw this shape on graph paper and type the coordinates of the starting squares right into R!</p>
+</div>
+<div id="find-the-neighbours" class="section level3">
+<h3>Find the neighbours</h3>
+<p>In order to find out what happens in each time step (frequently called a ‘tick’ among fans of the Game), we need to consult the neighbours of every cell. We can find out what each cell’s neighbours will be right at the start, and use this same matrix throughout. This is probably the “tidiest” aspect of the approach I’m using here.</p>
+<pre class="r"><code># Where are a cell&#39;s neighbours
+neighs &lt;- expand.grid(r = -1:1, c = -1:1) %&gt;% 
+  # you can&#39;t be your own neighbour
+  filter(!(r == 0 &amp; c == 0))
+
+# where is _everyone&#39;s_ neighbour?!
+ns &lt;- space %&gt;% 
+  tbl_df %&gt;% 
+  mutate(neighbour_coords = map2(r, c, ~ sweep(neighs, 2, c(.x, .y), FUN = `+`))) %&gt;% 
+  unnest(neighbour_coords) %&gt;% 
+  # drop the zeros and any negative cells; these are just outside the space we&#39;re studying
+  filter(r1 &gt;= 1 &amp; r1 &lt;= 80,
+         c1 &gt;= 1 &amp; c1 &lt;= 80)
+
+knitr::kable(head(ns, 16))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">r</th>
+<th align="right">c</th>
+<th align="right">r1</th>
+<th align="right">c1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">2</td>
+</tr>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">2</td>
+</tr>
+<tr class="odd">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">2</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">4</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">2</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">4</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">4</td>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">4</td>
+<td align="right">1</td>
+<td align="right">5</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">4</td>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">2</td>
+</tr>
+</tbody>
+</table>
+<p>In this dataframe, <code>r</code> and <code>c</code> give us the coordinates of the cell in question (let’s call it the “focal cell”), and <code>r1</code> and <code>c1</code> the coordinates of all of its neighbours. Because what happens to the focal cell depends on sum of all neighbours, this “list of neighbours” is going to come in handy for computing the next tick in the simulation.</p>
+<p>Finding the neighbours in advance saves us some computational effort; it won’t need to be done in each iteration later. There are a <em>ton</em> of neighbours, just less than 8 times the number of cells in our starting grid (less, because border cells have fewer neighbours).</p>
+<pre class="r"><code>nrow(start)</code></pre>
+<pre><code>## [1] 6400</code></pre>
+<pre class="r"><code>nrow(ns)</code></pre>
+<pre><code>## [1] 50244</code></pre>
+</div>
+<div id="advancing-by-one-tick" class="section level3">
+<h3>Advancing by one tick</h3>
+<p>OK so how do we find out what happens to each cell, so we can predict how the shape in <code>start</code> (Figure above) is going to change? All we need is a pair of <code>left_join()</code>s. First, we <code>left_join</code> the start to the neighbour data.frame – that shows us whether any particular neighbour is alive or dead. Then, we add them all up using <code>summarize</code>.</p>
+<p>Now we know how many neighbours each cell has, but we need one more piece of information – the value for each cell itself. We get that with another <code>left_join()</code>. Now we have both pieces of information that we need in the same data.frame! In a final step, we just apply the rules of the Game of Life as described above. This is a nice chance to use <code>case_when()</code>, which is a handy <code>dplyr</code> function. I like it here because it lets us write out the rules of the Game very concisely:</p>
+<pre class="r"><code>ns %&gt;% 
+  left_join(start, by = c(r1 = &quot;r&quot;, c1 = &quot;c&quot;)) %&gt;%
+  group_by(r, c) %&gt;% 
+  summarize(sum_neigh = sum(v)) %&gt;% 
+  left_join(start) %&gt;% 
+  mutate(v_new = case_when(
+    # if the focal cell is dead, and has three neighbours, its alive now
+    v == 0 &amp; sum_neigh == 3 ~ 1,
+    v == 1 &amp; sum_neigh &lt; 2  ~ 0,
+    v == 1 &amp; sum_neigh &gt; 3  ~ 0,
+    # otherwise leave it alone
+    TRUE                    ~ v
+  )) %&gt;% 
+  select(r, c, v = v_new, sum_neigh) %&gt;% 
+  ggplot(aes(x = c, y = r, fill = as.factor(v))) %&gt;% 
+  appearance</code></pre>
+<pre><code>## Joining, by = c(&quot;r&quot;, &quot;c&quot;)</code></pre>
+<p><img src="/post/2018-01-12-a-tidy-game-of-life_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>At the end of this little demo pipeline I chose to use this weird trick with my homemade <code>appearance</code> function. This is a small function that takes a <code>ggplot2</code> object as its input, and adds the geoms and formatting to it that I’ve already chosen. This keeps me from having to re-describe this same combination of geoms and colours every time.</p>
+<p>Once we have a process that advances the simulation one tick, all we need to do is iterate the process as long as we like! A simple way to do that is to wrap the code above into a function, then run that through the trusty ol’ <code>for</code> loop for, say, 70 ticks:</p>
+<pre class="r"><code>tick_by_leftjoin &lt;- function(df, .ns = ns){
+  .ns %&gt;% 
+    left_join(df, by = c(r1 = &quot;r&quot;, c1 = &quot;c&quot;)) %&gt;% 
+    group_by(r, c) %&gt;% 
+    summarize(sum_neigh = sum(v)) %&gt;% 
+    left_join(df, by = c(&quot;r&quot;, &quot;c&quot;)) %&gt;% 
+    mutate(v_new = case_when(
+      # if the focal cell is dead, and has three neighbours, its alive now
+      v == 0 &amp; sum_neigh == 3 ~ 1,
+      v == 1 &amp; sum_neigh &lt; 2  ~ 0,
+      v == 1 &amp; sum_neigh &gt; 3  ~ 0,
+      # otherwise leave it alone
+      TRUE                    ~ v
+    )) %&gt;% 
+    select(r, c, v = v_new)
+}
+
+# make an output list
+ll &lt;- vector(mode = &quot;list&quot;, 70)
+
+ll[[1]] &lt;- start
+
+for(n in 2:length(ll)){
+  ll[[n]] &lt;- tick_by_leftjoin(ll[[n-1]])
+}</code></pre>
+<p>Finally, once we have this object we can just turn it into a large data.frame and make a gif! This is all thanks to the very handy <a href="https://github.com/dgrtwo/gganimate"><code>gganimate</code></a> by David Robinson:</p>
+<pre class="r"><code>p &lt;- ll %&gt;% 
+  bind_rows(.id = &quot;tick&quot;) %&gt;%
+  mutate(tick = as.numeric(tick)) %&gt;% 
+  # filter(tick &lt; 5) %&gt;%
+  ggplot(aes(x = c, y = r, fill = as.factor(v), frame = tick)) %&gt;% 
+  appearance
+
+gganimate(p, interval = 0.1, filename = &quot;../../static/img/stairs.gif&quot;)</code></pre>
+<div class="figure">
+<img src="/img/stairs.gif" />
+
+</div>
+<p>And that’s it! Fortunately, the output above looks the same as the animation shown in the YouTube video! And now, we have a framework to run any starting configuration we like, so long as we have the patience to write it into a data.frame.</p>
+</div>
+<div id="a-fun-exercise-to-the-reader" class="section level3">
+<h3>a fun exercise to the Reader</h3>
+<p><em>(do i have readers?)</em></p>
+<p>You might find it fun to play with the famous <strong>R-pentomino</strong>, which generates quite the sound-and-light show from the seemingly minimal beginning of just 5 squares. The discovery of this shape generated a lot of discussion, because it sends out “gliders” which travel forever and ever, right off the screen: it has no stable final configuration.</p>
+<pre class="r"><code>pento &lt;- tibble::tribble(
+   ~r,  ~c, ~v,
+   0L, -1L, 1L,
+  -1L,  0L, 1L,
+   0L,  0L, 1L,
+   1L,  0L, 1L,
+   1L,  1L, 1L
+  )</code></pre>
+</div>
+</div>
+<div id="other-implementations" class="section level2">
+<h2>other implementations</h2>
+<p>I know, I know, this is not at all the best way to be doing this. For example, here is a great example using matrices on <a href="https://rosettacode.org/wiki/Conway%27s_Game_of_Life#R">Rosetta Code</a>. But perhaps doing this the “tidy way” is an interesting exercise – I could see this being a homework problem in a class meant to teach the Tidyverse!</p>
+</div>
