@@ -6,7 +6,7 @@ copyright = "Andrew MacDonald"
 disqusShortname = "thestudyofthehousehold"
 googleAnalytics = "XXX"
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
-relativeUrls = true
+relativeurls = false
 
 [Author]
     name = "Andrew MacDonald"
