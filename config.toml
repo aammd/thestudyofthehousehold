@@ -36,7 +36,7 @@ relativeurls = false
     highlightJsLocalUrl = ""
 
 [Permalinks]
-    post = "/:year/:month/:day/:filename/"
+    post = ":filename/"
 #
 #[[menu.main]]
 #    name = "Blog"
