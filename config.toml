@@ -6,11 +6,11 @@ copyright = "Andrew MacDonald"
 disqusShortname = "thestudyofthehousehold"
 googleAnalytics = "XXX"
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
-relativeurls = false
+#relativeurls = false
 
 [Author]
     name = "Andrew MacDonald"
-    profile = "https://google.com/+XXX"
+    profile = "https://aammd.info"
 
 [Taxonomies]
     tag = "tags"
@@ -21,7 +21,7 @@ relativeurls = false
     description = "How the science of ecology connects to everything"
     github = "https://github.com/aammd"
     gitlab = ""
-    linkedin = "https://linkedin.com/in/XXX/"
+    linkedin = "https://linkedin.com/in/andrew-macdonald-76649474/"
     gplus = ""
     twitter = "https://twitter.com/polesasunder"
     stackoverflow = "https://stackoverflow.com/users/1727133/andrewmacdonald"
