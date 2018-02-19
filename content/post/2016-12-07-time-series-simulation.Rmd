@@ -4,6 +4,8 @@ author: "Andrew MacDonald"
 date: 2016-12-07
 categories: ["R"]
 tags: ["R Markdown", "plot", "simulation"]
+aliases:
+  - /post/2016-12-07-time-series-simulation/
 ---
 
 

@@ -1,7 +1,8 @@
 ---
-title: Formulate are a lot like French Slang
+title: Formulae are a lot like French Slang
 author: Andrew MacDonald
 date: '2017-12-29'
+draft: true
 slug: formulate-are-a-lot-like-french-slang
 categories:
   - R

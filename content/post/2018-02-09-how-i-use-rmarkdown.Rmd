@@ -9,6 +9,8 @@ tags:
   - rstats
   - R Markdown
   - free advice
+aliases:
+  - /post/how-i-use-rmarkdown/
 ---
 
 Last week or so, I achieved a wonderous thing. A trivial thing. I acheived a wondrous, trivial thing:

@@ -1,0 +1,32 @@
+---
+title: Testing proportions
+author: Andrew MacDonald
+date: '2018-02-23'
+draft: true
+slug: testing-proportions
+categories: []
+tags:
+  - simulation
+---
+
+```{r}
+args(binom.test)
+
+ns <- seq(2, 200, by = 2)
+xs <- ns / 2
+
+binom.test(xs[3], ns[3])
+
+test_to_200 <- purrr::map2(xs, ns, binom.test)
+
+
+library(ggplot2)
+library(magrittr)
+purrr::map_df(test_to_200, broom::tidy) %>% 
+  ggplot(aes(x = parameter, ymin = conf.low, ymax = conf.high)) + geom_ribbon()
+  
+```
+
+there is also [this very classic paper](https://academic.oup.com/biomet/article/26/4/404/291538)
+
+and this more recent thing: [proportions done seven ways](http://citeseerx.ist.psu.edu/viewdoc/summary;jsessionid=BF0333B82FD5B5A73FD66C40CA464E37?doi=10.1.1.326.1772)

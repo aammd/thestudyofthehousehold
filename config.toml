@@ -38,7 +38,7 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
     highlightJsLocalUrl = ""
 
 [Permalinks]
-    post = "post/:filename/"
+    post = "/:year/:month/:day/:filename/"
 #
 #[[menu.main]]
 #    name = "Blog"
