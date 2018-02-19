@@ -11,7 +11,7 @@ tags:
   - rstats
   - free advice
   - notes
-alias:
+aliases:
   - /post/easily-made-fitted-and-predicted-values-made-easy/
 ---
 
