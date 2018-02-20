@@ -1,4 +1,4 @@
-baseurl = "https://thestudyofthehousehold.com/"
+baseurl = "http://thestudyofthehousehold.com/"
 # should there be a trailing / or not?!?!
 title = "The study of the household"
 theme = "ghostwriter"
