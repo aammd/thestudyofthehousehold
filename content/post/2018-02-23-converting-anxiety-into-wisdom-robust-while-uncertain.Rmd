@@ -1,0 +1,46 @@
+---
+title: 'Converting Anxiety into wisdom: robust while uncertain'
+author: Andrew MacDonald
+date: '2018-02-23'
+slug: converting-anxiety-into-wisdom-robust-while-uncertain
+categories: []
+tags: []
+description: 'Looking for wisdom in anxiety, and for evidence in uncertainty'
+bibliography: 2018-02-23-converting-anxiety-into-wisdom-robust-while-uncertain.bib
+link-citations: true
+---
+
+
+> I can be skeptical, even anxious, about ecology -- particularly about methods and data quality. However, "anxiety can be cultivated into Wisdom" (McElreath, 201XXXX). This is my mission for myself, and this post might be one of a series attempting this cultivation.
+
+I like thinking about quantitative methods, and I like giving feedback on proposed or in-progress work. Unfortunately, sometimes I fall into the role of a critic, finding "fault" -- not a position I relish. It happened that recently I was wringing my hands over a proposed analysis, and a friend and collaborator had a wise comment: _remember to find a balance between creativity and skepticism_.
+
+I'm very grateful for this comment, and it ended up informing a lot of my reading this week. So this post is just a few thoughts on some papers which I think are doing this well. They inspire me to think hard about how to measure evidence well, and how to represent uncertainty accurately.
+
+## Burned bridges
+
+> We cross our bridges when we come to them and burn them behind us, with nothing to show for our progress except a memory of the smell of smoke, and a presumption that once our eyes watered. -- Tom Stoppard, Rosencrantz and Guildenstern are Dead
+
+In ecology, we are often in the position of trying to figure out the past based on whatever we can see in the present. This is true whether you're an ecologist studying animals that are all dead, leaving only fossils or other traces; or a student of actual living animals, wondering how they got there. In all cases, what you can see is not what was there: all kinds of noise, sampling, and luck get in between "whatever happened" and "what you can see".  We smell the smoke, and try to imagine the bridges.
+
+Very recent this week is an interesting short paper, which shows that human arrival consistently explains the extinction of large animals [@bartlett2018]. We showed up, and they disappeared. 
+
+I thought this paper was great! Their goal was to make the most of the data that they had -- which was approximate dates of arrival of humans in different parts of the world, and approximate dates of the disappearance of animals. Not all of these numbers are very certain, but they didn't want to just throw out or ignore uncertain ones -- so they used resampling to come up with 1000 sampled "scenarios" to analyze. I thought that was mighty clever. 
+
+By chance I read a paper that was framed in a strikingly similar way. In Foundations of Macroecology [-@Smith2014-kr], David Raup's 1975 paper on rarefaction is introduced as another example of robustness in the face of uncertainty. The fossil record is terribly uncertain: many animals don't preserve well, our records are fragmentary, and there are more in recent rocks than in very old. Raup was working at a time when people thought of the fossil record as "unreadable". In the forword before this paper, Andrew Bush says of Raup "his skepticism did not lead to fatalism, and he saw no reason a flawed  fossil record could not be read and understood if the biases were not also understood". Powerful words!
+
+## Wracked with doubt^[see what i did there]
+
+OK, so if you think about the biases in your data, you can still try to understand the biology. Of course, the more complex and subtle are these "biases", the harder that gets. Ecologists have had a long (and often painful?) history of inferring pattern from process. In what I'd call a heroic paper, Barner et al. [-@Barner2018-oq] threw the whole clown car of methods at a dataset of presence-absence of organisms that live in the rocky intertidal. They compared the "interactions" measured from these approaches and compared it to published accounts of who interacts with whom. They found that you can't necessarily trust what you see!
+
+![not all heroes wear capes!](/img/spp_networks.png)
+
+The networks from the different methods are all slightly different to each other -- but even more importantly, they don't often match the stories told by lab experiments. They identify "interactions" between species that don't show up at all -- and worse, they miss known interactions altogether! 
+
+Incidentally, Barner et al. were focussed on non-trophic organisms, but a completely separate group of people -- also intertidal ecologists -- found that you can't put much faith in those either [@Freilich2018-ap]! 
+
+### Conclusion
+
+I'm not sure what the moral here is. Sometimes, when we know what causes the uncertainty (incomplete sampling) or at least we know where it is (bouded between 14k and 10k years ago), then we can often come up with a straightforward way to represent it in our analysis.  But sometimes the uncertainty and the data are much more subtly combined -- in count data, uncertainty is _part_ of the data, and is always expected whenever ecologists count animals. The important thing is to remember where it comes from, and how it might affect our conclusions.
+
+### References

@@ -9,6 +9,8 @@ googleAnalytics = ""#"UA-87688941-1"
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 #relativeurls = false
 
+enableEmoji = true
+
 [Author]
     name = "Andrew MacDonald"
     profile = "https://aammd.info"
