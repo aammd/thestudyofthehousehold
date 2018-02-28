@@ -1,0 +1,11 @@
+---
+title: test post
+author: Andrew MacDonald
+date: '2018-03-01'
+slug: test-post
+categories: []
+tags: []
+---
+
+This is just to see if the site still works! 
+If you're reading this, thank you for your attention  :) 
