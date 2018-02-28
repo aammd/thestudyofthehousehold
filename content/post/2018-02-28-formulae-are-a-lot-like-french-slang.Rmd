@@ -1,0 +1,131 @@
+---
+title: Mixed modelling as a foreign language
+author: Andrew MacDonald
+date: '2018-02-28'
+draft: true
+slug: formulae-are-a-lot-like-french-slang
+categories:
+  - R
+tags:
+  - rstats
+  - teaching
+  - rethinking
+  - lme4
+---
+
+
+> _j' n'y suis jamais allé quoi_
+
+> _Ah dacc, tout s'explique donc_
+
+> Andrew: ... pardon, mais vous avez dit combien de mots là?
+
+I have something like that interaction almost every day. French is an intricate language, and high school studying prepared me well for all the conjugations, rules, and exceptions. What I was not prepared for was the sheer number of _words_. The French pepper their speech with small pronouns, exclamations and phrases -- which they then elide when speaking, you know -- for **convenience**. I'm sure it makes speaking faster -- but _putain_ it also makes understanding them harder!
+
+In other words, it's just like `y ~ x + (x|group)`
+
+![](https://media.giphy.com/media/1ee0TtdaC6Oas/giphy.gif)
+
+Not all of us are language minorities in statistical modelling. Many practitioners today started their career several programming languages ago. To them, modern "conveniences" like R formulae are compact and information dense. I imagine they marvel at how much can be expressed in so few keystrokes^[Richard McElreath wrote [an excellent blog on this very topic](http://elevanth.org/blog/2017/08/28/first-world-modeling-problems/), which you should read. In fact, this post is a sort of compliment to his. His post describes how statistical software grew up around him as he was developing as a scientist (There are photos of _punch cards_).] But to myself and many other early-career scientists, statistical programming is a country we had to move to. And in this land they speak a strange tongue, and they speak it quickly.
+
+### How to speak formula like a local
+
+Here is an example, straight from the `lme4` vignette:
+
+```{r model-lme4}
+library(lme4)
+
+fm1 <- lmer(Reaction ~ Days + (Days | Subject), sleepstudy)
+  
+summary(fm1)
+
+```
+
+If you had asked the Andrew of a few years ago what this model formula meant, you would have heard a rather vague answer, something like "well it fits the fixed effect of Days with a random effect of Days by Subject". But if you pressed him, he'd have a hard time explaining exactly what he meant. How many numbers does that take? What is the _equation_ for these effects? 
+
+The model actually has _five_ numbers in it:
+
+```{r}
+broom::tidy(fm1)
+```
+
+1. The intercept (Reaction when Days = 0)
+2. A slope (How Reaction goes up when Days goes up by 1)
+3. The standard deviation of the Intercept: how different are Subjects in their Intercept?
+4. The standard deviation of the slope: how different are the Subjects in the effect of Days?
+5. the correlation between those last two items
+
+And if you consider that you're interested in the actual people in the study, there's an average slope and intercept and 18 departures from it:
+
+```{r print-effects}
+fixef(fm1)
+ranef(fm1)
+nrow(ranef(fm1)$Subject)
+```
+
+Not knowing, then suddenly realizing, can come as a nasty shock. If you're speaking your second language, why would you think that this:
+
+```r
+Reaction ~ Days + (Days | Subject)
+```
+
+contains a *correlation*, for crying out loud!? In the same way, I can't help but be vaguely, unpleasantly surprised when I'm trying to parse some French that somebody just spoke, and I find a _y_ right there among some other normal words. (what is the _y_ even for?!)
+
+There are still more means of writing models that are meant to "save time" (how about `Days + (Days|Group/Subject`), but compress *even more* terms into fewer characters on the computer. Fortunately there is an extensive resource on mixed models, which [includes a dictionary defining the different model formulae](http://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#model-specification). 
+
+How to learn what all these mean? Well, I did what I've done in the past when I've traveled to lands where I didn't speak the language: I made flashcards. That worked for a while. But I think it is better for learners if they master the meaning, not just the sound. Is there an easier way?
+
+### "Sorry could you repeat that please"
+
+Can you slow down the speech, so you can hear every syllable? Of course. There are always many ways to write out a model. Here is the exact^[Ok not *exact* exact, it is obviously Bayesian and has priors, which the `lme4` one does not.] same model as above, written in the `rethinking` package. 
+
+It takes... a bit more typing:
+
+```{r rethinking-example, cache=TRUE, message=FALSE, warning=FALSE, results='hide'}
+library(rstan)
+library(rethinking)
+
+sleep_model <- alist(
+  Reaction                     ~ dnorm(mean_reaction, sigma_reaction),  
+  mean_reaction              <-  a              + bdays              * Days + 
+                                 a_sub[Subject] + bdays_sub[Subject] * Days,
+  c(a_sub, bdays_sub)[Subject] ~ dmvnormNC(sig_sub, rho_sub),
+  sig_sub                      ~ dcauchy(0, 2),
+  rho_sub                      ~ dlkjcorr(4),
+  a                            ~ dnorm(30, 5),
+  bdays                        ~ dnorm(2, 5),
+  sigma_reaction               ~ dcauchy(0, 2)
+)
+
+data(sleepstudy, package = "lme4")
+
+sleepstudy$Subject <- as.integer(sleepstudy$Subject)
+
+sleep_model <- map2stan(sleep_model, data = sleepstudy , iter = 3000 , warmup=1000 , chains=1 , cores=1 )
+# sample via rethinking
+
+```
+
+aaaaaand now my hands are tired. When you write a model this way you have to put all the pieces together by hand. The philosophy behind the `rethinking` package and book is that students should learn how the little statistical robot works before they go and turn it loose on the world. I couldn't agree more. 
+
+## Slow down and talk proper
+
+Just as there's no right way to speak, there is no right way to create statistical models. But I think we can all agree that there is such a thing as clarity in communication. This is especially obvious when you're in front of a class teaching, or when your colleague / grad student / friend's grad student / friend calls you for advice.  Can we keep the convenience, but express ourselves more clearly?
+
+Perhaps we can do some simple, even trivial things to make our models a little easier to read. One Weird Trick might be to just write out the intercept: 
+
+```r
+Reaction ~ 1 + Days + (1 + Days | Subject)
+```
+
+Even easier, if you are a Bayesian anyways, is to write out all your priors (which is an upright and righteous thing to do anyways). This way you can see your model just by counting them. This is good practice, for example, when you're writing using `brms` or `rstanarm`.
+
+### et alors
+
+![](https://media.giphy.com/media/WVN0TgKnNEFc4/giphy.gif)
+
+I would wager that most ecologists don't realize how model formulae translate into parameters in the model. Perhaps that's not the biggest problem. Just as I may not need to know how to separate every word in a French expression to understand it, or even use it myself. At the same time though -- as anyone who has lived as a linguistic minority will tell you -- if you only partly understand the words you are using, you _will_ humiliate yourself eventually. I suspect the same holds for all languages, even R's weird formula one. 
+
+However we write out our models, we should make sure that our students (collaborators, supervisors, consciences) know how many actual numbers are going to be calculated. Most of all, let's remember how hard it was to strike up a conversation when we first started learning this odd foreign language.
+
+

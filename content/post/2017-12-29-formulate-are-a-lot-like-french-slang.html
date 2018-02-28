@@ -14,5 +14,240 @@ tags:
 
 
 
-<p><em>j’n’suis jamais y allé</em></p>
-<p>If you think about it, formulae are a lot like french slang</p>
+<blockquote>
+<p>Francophone: <em>j’n’suis jamais y allé</em> Andrew: … pardon, mais tu as dit combien de mots là?</p>
+</blockquote>
+<p>If you think about it, R’s statistical formulae are a lot like french slang.</p>
+<p>Here is an example, straight from the <code>lme4</code> vignette:</p>
+<pre class="r"><code>library(lme4)</code></pre>
+<pre><code>## Loading required package: Matrix</code></pre>
+<pre class="r"><code>fm1 &lt;- lmer(Reaction ~ Days + (Days | Subject), sleepstudy)
+  
+summary(fm1)</code></pre>
+<pre><code>## Linear mixed model fit by REML [&#39;lmerMod&#39;]
+## Formula: Reaction ~ Days + (Days | Subject)
+##    Data: sleepstudy
+## 
+## REML criterion at convergence: 1743.6
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -3.9536 -0.4634  0.0231  0.4634  5.1793 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev. Corr
+##  Subject  (Intercept) 612.09   24.740       
+##           Days         35.07    5.922   0.07
+##  Residual             654.94   25.592       
+## Number of obs: 180, groups:  Subject, 18
+## 
+## Fixed effects:
+##             Estimate Std. Error t value
+## (Intercept)  251.405      6.825   36.84
+## Days          10.467      1.546    6.77
+## 
+## Correlation of Fixed Effects:
+##      (Intr)
+## Days -0.138</code></pre>
+<p>If you had asked the Andrew of a few years ago what this model formula meant, you would have heard a rather vague answer, somthing like “well it fits the fixed effect of Days with a random effect of Days by Subject”. But if you pressed him, he’d have a hard time explaining exactly what he meant. How many numbers does that take? What is the <em>equation</em> for these effects?</p>
+<p>The model actually has <em>five</em> numbers in it:</p>
+<pre class="r"><code>broom::tidy(fm1)</code></pre>
+<pre><code>##                           term     estimate std.error statistic    group
+## 1                  (Intercept) 251.40510485  6.824556 36.838310    fixed
+## 2                         Days  10.46728596  1.545789  6.771485    fixed
+## 3       sd_(Intercept).Subject  24.74044768        NA        NA  Subject
+## 4              sd_Days.Subject   5.92213326        NA        NA  Subject
+## 5 cor_(Intercept).Days.Subject   0.06555134        NA        NA  Subject
+## 6      sd_Observation.Residual  25.59181589        NA        NA Residual</code></pre>
+<ol style="list-style-type: decimal">
+<li>The intercept (Reaction when Days = 0)</li>
+<li>A slope (How Reaction goes up when Days goes up by 1)</li>
+<li>The standard deviation of the Intercept: how different are Subjects in their Intercept?</li>
+<li>The std. dev. of the slope: how different are the Subjects in their slopes?</li>
+<li>the correlation between those last two items</li>
+</ol>
+<p>And if you consider that you’re interested in the actual people in the study, there’s an average slope and intercept and 18 departures from it:</p>
+<pre class="r"><code>fixef(fm1)</code></pre>
+<pre><code>## (Intercept)        Days 
+##   251.40510    10.46729</code></pre>
+<pre class="r"><code>ranef(fm1)</code></pre>
+<pre><code>## $Subject
+##     (Intercept)        Days
+## 308   2.2585654   9.1989719
+## 309 -40.3985770  -8.6197032
+## 310 -38.9602459  -5.4488799
+## 330  23.6904985  -4.8143313
+## 331  22.2602027  -3.0698946
+## 332   9.0395259  -0.2721707
+## 333  16.8404312  -0.2236244
+## 334  -7.2325792   1.0745761
+## 335  -0.3336959 -10.7521591
+## 337  34.8903509   8.6282839
+## 349 -25.2101104   1.1734143
+## 350 -13.0699567   6.6142050
+## 351   4.5778352  -3.0152572
+## 352  20.8635925   3.5360133
+## 369   3.2754530   0.8722166
+## 370 -25.6128694   4.8224646
+## 371   0.8070397  -0.9881551
+## 372  12.3145394   1.2840297</code></pre>
+<pre class="r"><code>nrow(ranef(fm1)$Subject)</code></pre>
+<pre><code>## [1] 18</code></pre>
+<p>I would wager that most ecologists don’t realize how model formulae translate into parameters in the model. Perhaps that’s not the biggest problem. Just as I may not need to know how to separate every word in a French expression to understand it.</p>
+<p>Not knowing, then suddenly realizing, can come as a nasty shock. If you’re speaking your second language, why would you think that this:</p>
+<pre class="r"><code>Reaction ~ Days + (Days | Subject)</code></pre>
+<p>contains a <em>correlation</em>, for crying out loud!? In the same way, I can’t help but be vaguely, unpleasantly suprised when I’m trying to parse some French that somebody just spoke, and I find a <em>y</em> right there among some other normal words. (what is the <em>y</em> even for?!)</p>
+<pre class="r"><code>library(rstan)</code></pre>
+<pre><code>## Warning: package &#39;rstan&#39; was built under R version 3.4.3</code></pre>
+<pre><code>## Loading required package: ggplot2</code></pre>
+<pre><code>## Loading required package: StanHeaders</code></pre>
+<pre><code>## Warning: package &#39;StanHeaders&#39; was built under R version 3.4.3</code></pre>
+<pre><code>## rstan (Version 2.17.3, GitRev: 2e1f913d3ca3)</code></pre>
+<pre><code>## For execution on a local, multicore CPU with excess RAM we recommend calling
+## options(mc.cores = parallel::detectCores()).
+## To avoid recompilation of unchanged Stan programs, we recommend calling
+## rstan_options(auto_write = TRUE)</code></pre>
+<pre class="r"><code>library(rethinking)</code></pre>
+<pre><code>## Loading required package: parallel</code></pre>
+<pre><code>## rethinking (Version 1.59)</code></pre>
+<pre class="r"><code>sleep_model &lt;- alist(
+  Reaction                     ~ dnorm(mean_reaction, sigma_reaction),  
+  mean_reaction              &lt;-  a              + bdays              * Days + 
+                                 a_sub[Subject] + bdays_sub[Subject] * Days,
+  c(a_sub, bdays_sub)[Subject] ~ dmvnormNC(sig_sub, rho_sub),
+  sig_sub                      ~ dcauchy(0, 2),
+  rho_sub                      ~ dlkjcorr(4),
+  a                            ~ dnorm(30, 5),
+  bdays                        ~ dnorm(2, 5),
+  sigma_reaction               ~ dcauchy(0, 2)
+)
+
+data(sleepstudy, package = &quot;lme4&quot;)
+
+sleepstudy$Subject &lt;- as.integer(sleepstudy$Subject)
+
+sleep_model &lt;- map2stan(sleep_model, data = sleepstudy , iter = 3000 , warmup=1000 , chains=1 , cores=1 )</code></pre>
+<pre><code>## In file included from file1fc14a3ecd1d.cpp:8:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math.hpp:4:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:4:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math/rev/core.hpp:12:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math/rev/core/gevv_vvv_vari.hpp:5:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math/rev/core/var.hpp:7:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/math/tools/config.hpp:13:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/config.hpp:39:
+## /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/config/compiler/clang.hpp:200:11: warning: &#39;BOOST_NO_CXX11_RVALUE_REFERENCES&#39; macro redefined [-Wmacro-redefined]
+## #  define BOOST_NO_CXX11_RVALUE_REFERENCES
+##           ^
+## &lt;command line&gt;:6:9: note: previous definition is here
+## #define BOOST_NO_CXX11_RVALUE_REFERENCES 1
+##         ^
+## In file included from file1fc14a3ecd1d.cpp:8:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math.hpp:4:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:4:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math/rev/core.hpp:36:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math/rev/core/operator_unary_plus.hpp:7:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/stan/math/prim/scal/fun/constants.hpp:4:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/math/constants/constants.hpp:13:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/math/tools/convert_from_string.hpp:15:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/lexical_cast.hpp:32:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/lexical_cast/try_lexical_convert.hpp:42:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/lexical_cast/detail/converter_lexical.hpp:52:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/container/container_fwd.hpp:61:
+## /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/container/detail/std_fwd.hpp:27:1: warning: inline namespaces are a C++11 feature [-Wc++11-inline-namespace]
+## BOOST_MOVE_STD_NS_BEG
+## ^
+## /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/move/detail/std_ns_begin.hpp:18:34: note: expanded from macro &#39;BOOST_MOVE_STD_NS_BEG&#39;
+##    #define BOOST_MOVE_STD_NS_BEG _LIBCPP_BEGIN_NAMESPACE_STD
+##                                  ^
+## /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/__config:395:52: note: expanded from macro &#39;_LIBCPP_BEGIN_NAMESPACE_STD&#39;
+## #define _LIBCPP_BEGIN_NAMESPACE_STD namespace std {inline namespace _LIBCPP_NAMESPACE {
+##                                                    ^
+## In file included from file1fc14a3ecd1d.cpp:856:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/rstan/include/rstan/rstaninc.hpp:3:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/rstan/include/rstan/stan_fit.hpp:36:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/src/stan/services/optimize/bfgs.hpp:11:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/src/stan/optimization/bfgs.hpp:9:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/StanHeaders/include/src/stan/optimization/lbfgs_update.hpp:6:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/circular_buffer.hpp:54:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/circular_buffer/details.hpp:20:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/move/move.hpp:30:
+## In file included from /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/move/iterator.hpp:27:
+## /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/move/detail/iterator_traits.hpp:29:1: warning: inline namespaces are a C++11 feature [-Wc++11-inline-namespace]
+## BOOST_MOVE_STD_NS_BEG
+## ^
+## /Library/Frameworks/R.framework/Versions/3.4/Resources/library/BH/include/boost/move/detail/std_ns_begin.hpp:18:34: note: expanded from macro &#39;BOOST_MOVE_STD_NS_BEG&#39;
+##    #define BOOST_MOVE_STD_NS_BEG _LIBCPP_BEGIN_NAMESPACE_STD
+##                                  ^
+## /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/__config:395:52: note: expanded from macro &#39;_LIBCPP_BEGIN_NAMESPACE_STD&#39;
+## #define _LIBCPP_BEGIN_NAMESPACE_STD namespace std {inline namespace _LIBCPP_NAMESPACE {
+##                                                    ^
+## 3 warnings generated.
+## 
+## SAMPLING FOR MODEL &#39;Reaction ~ dnorm(mean_reaction, sigma_reaction)&#39; NOW (CHAIN 1).
+## 
+## Gradient evaluation took 8e-05 seconds
+## 1000 transitions using 10 leapfrog steps per transition would take 0.8 seconds.
+## Adjust your expectations accordingly!
+## 
+## 
+## Iteration:    1 / 3000 [  0%]  (Warmup)
+## Iteration:  300 / 3000 [ 10%]  (Warmup)
+## Iteration:  600 / 3000 [ 20%]  (Warmup)
+## Iteration:  900 / 3000 [ 30%]  (Warmup)
+## Iteration: 1001 / 3000 [ 33%]  (Sampling)
+## Iteration: 1300 / 3000 [ 43%]  (Sampling)
+## Iteration: 1600 / 3000 [ 53%]  (Sampling)
+## Iteration: 1900 / 3000 [ 63%]  (Sampling)
+## Iteration: 2200 / 3000 [ 73%]  (Sampling)
+## Iteration: 2500 / 3000 [ 83%]  (Sampling)
+## Iteration: 2800 / 3000 [ 93%]  (Sampling)
+## Iteration: 3000 / 3000 [100%]  (Sampling)
+## 
+##  Elapsed Time: 3.1978 seconds (Warm-up)
+##                6.79386 seconds (Sampling)
+##                9.99166 seconds (Total)
+## 
+## 
+## SAMPLING FOR MODEL &#39;Reaction ~ dnorm(mean_reaction, sigma_reaction)&#39; NOW (CHAIN 1).
+## 
+## Gradient evaluation took 3.4e-05 seconds
+## 1000 transitions using 10 leapfrog steps per transition would take 0.34 seconds.
+## Adjust your expectations accordingly!
+## 
+## 
+## WARNING: No variance estimation is
+##          performed for num_warmup &lt; 20
+## 
+## Iteration: 1 / 1 [100%]  (Sampling)
+## 
+##  Elapsed Time: 1e-06 seconds (Warm-up)
+##                8.3e-05 seconds (Sampling)
+##                8.4e-05 seconds (Total)</code></pre>
+<pre><code>## Warning: There were 1 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help. See
+## http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup</code></pre>
+<pre><code>## Warning: Examine the pairs() plot to diagnose sampling problems</code></pre>
+<pre><code>## Computing WAIC</code></pre>
+<pre><code>## Constructing posterior predictions</code></pre>
+<pre><code>## [ 200 / 2000 ]
+[ 400 / 2000 ]
+[ 600 / 2000 ]
+[ 800 / 2000 ]
+[ 1000 / 2000 ]
+[ 1200 / 2000 ]
+[ 1400 / 2000 ]
+[ 1600 / 2000 ]
+[ 1800 / 2000 ]
+[ 2000 / 2000 ]</code></pre>
+<pre class="r"><code># sample via rethinking</code></pre>
+<p>aaaaaand now my hands are tired. When you write a model this way you have to put all the pieces together by hand. The philosophy behind the <code>rethinking</code> package and book is that students should learn how the little statistical robot works before they go and turn them loose on the world. I couldn’t agree more. Richard McElreath wrote a blog on this very topic, which you should read. In fact, this post is a sort of compliment to his. His post describes how statistical software grew up around him as he was developing as a scientist (There are photos of <em>punch cards</em>). But to myself and many other more juniour ecologists, statistical programming is a country we immigrated to. There they speak a strange tongue, and they speak it quickly.</p>
+<div id="slow-down-and-talk-proper" class="section level2">
+<h2>Slow down and talk proper</h2>
+<p>Just as there’s no right way to speak, there is no right way to create statistical models. But I think we can all agree that there is such a thing as clarity in communication.</p>
+<p>Perhaps we can do some simple, even trivial things to make our models a little easier to read. One Weird Trick might be to just write out the intercept:</p>
+<pre class="r"><code>Reaction ~ 1 + Days + (1 + Days | Subject)</code></pre>
+<p>Even easier, if you are a Bayesian anyways, is to write out all your priors (which is an upright and righteous thing to do anyways). This way you can see your model just by counting them:</p>
+<pre class="r"><code># brms</code></pre>
+<p>However we write out our models, we should make sure that our students (collaborators, supervisors, consciences) know how many actual numbers are going to be calculated. Most of all, let’s remember how hard it was to strike up a conversation when we first started learning this odd foreign language.</p>
+</div>
