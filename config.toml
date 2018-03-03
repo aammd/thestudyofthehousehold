@@ -5,7 +5,7 @@ theme = "ghostwriter"
 languageCode = "en-us"
 copyright = "Andrew MacDonald"
 disqusShortname = "thestudyofthehousehold"
-googleAnalytics = ""#"UA-87688941-1"
+googleAnalytics = "#UA-87688941-1"
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 #relativeurls = false
 
