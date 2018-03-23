@@ -66,3 +66,5 @@ My favourite RopenSci forum post is [here](https://discuss.ropensci.org/t/peace-
 ### Interesting things
 
 One day when I live in the same place for an extended period of time, I will be able to invest in wall art once again, and I'm going to get this beautiful [map of Canada with Indigenous place names](https://umaine.edu/canam/publications/coming-home-map/)
+
+By an odd coincidence, Chelsea Little is trying the same thing (a [post of her reading list](https://makeitsomeday.wordpress.com/)) this week as well! go check out hers too!
