@@ -8,7 +8,6 @@ categories:
   - motivation
 tags: []
 description: ''
-draft: true
 ---
 
 What are your weaknesses as a scientist? What should we do when we become aware of those weaknesses, or when someone _makes_ us aware?
