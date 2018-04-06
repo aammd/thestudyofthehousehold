@@ -45,10 +45,10 @@ average_per_kid &lt;- average_pizza + mass_hunger * body_mass_centered
 range(average_per_kid)</code></pre>
 <pre><code>## [1] 2.18 3.98</code></pre>
 <p>OK so between 2 and 4 slices per kid – seems plausible! But of course how much a kid eats is not determined by their mass alone. They vary in many ways, including their own inclinations, how they’ve been socialized, how hard they played Sportsball that day, what they had for breakfast etc. Many small effects might well give us a normal variation around the pizza slice average<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>:</p>
-<pre class="r"><code>set.seed(4812)
+<pre class="r"><code>set.seed(1234)
 # add normal variation to the average values
 # and round because anything smaller than tenths is just silly:
-actual_per_kid &lt;- round(average_per_kid + rnorm(33, mean = 0, sd = 0.33), 1)
+actual_per_kid &lt;- round(average_per_kid + rnorm(n = 33, mean = 0, sd = 0.3), 1)
 
 plot(body_mass_centered + mean_mass, actual_per_kid)</code></pre>
 <p><img src="/post/2018-04-06-group-mean-variables_files/figure-html/pizza-plot-1.png" width="672" /></p>

@@ -53,10 +53,10 @@ range(average_per_kid)
 OK so between 2 and 4 slices per kid -- seems plausible! But of course how much a kid eats is not determined by their mass alone. They vary in many ways, including their own inclinations, how they've been socialized, how hard they played Sportsball that day, what they had for breakfast etc. Many small effects might well give us a normal variation around the pizza slice average^[people who think that pizza slices ought to follow a poisson distribution clearly are not eating pizza in the same way as I do]:
 
 ```{r pizza-plot}
-set.seed(4812)
+set.seed(1234)
 # add normal variation to the average values
 # and round because anything smaller than tenths is just silly:
-actual_per_kid <- round(average_per_kid + rnorm(33, mean = 0, sd = 0.33), 1)
+actual_per_kid <- round(average_per_kid + rnorm(n = 33, mean = 0, sd = 0.3), 1)
 
 plot(body_mass_centered + mean_mass, actual_per_kid)
 
