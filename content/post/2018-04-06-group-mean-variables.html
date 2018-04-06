@@ -53,7 +53,7 @@ actual_per_kid &lt;- round(average_per_kid + rnorm(n = 33, mean = 0, sd = 0.3), 
 plot(body_mass_centered + mean_mass, actual_per_kid)</code></pre>
 <p><img src="/post/2018-04-06-group-mean-variables_files/figure-html/pizza-plot-1.png" width="672" /></p>
 <p>Above I generate the actual amount that each kid eats, by calculating the average and then adding some random noise on top of it. To do that, you can either generate random numbers from a normal distribution around the average <code>rnorm(33, average_per_kid, sd = 0.25)</code> or generate values with a mean of 0 and add them to the average – I chose to do the latter<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a>.</p>
-<p>In Figure <a href="#fig:pizza-plot"><strong>??</strong></a> we can easily two things: the data look plausible and suitably variable, and the body masses look correct. You can see that the x-axis is actually a sum of the centered body mass and the mean – which of course gives you back the original mass.</p>
+<p>In the figure above we can easily two things: the data look plausible and suitably variable, and the body masses look correct. You can see that the x-axis is actually a sum of the centered body mass and the mean – which of course gives you back the original mass.</p>
 <p>We can do a quick linear model to see if we can recover the original parameters:</p>
 <pre class="r"><code>pizza_data &lt;- data.frame(body_mass_centered, mean_mass, average_per_kid, actual_per_kid)
 
@@ -74,7 +74,7 @@ pizza_amount %&gt;%
 <p>This shows us that the model estimates the original values pretty precisely. The estimate of the intercept is lower than our intended value, but this is due to sampling error: we set a value of 3 for an average mass of 40kg, but the average in this sample is lower: 39.6kg. So here we are getting an estimate of the <em>sample</em> mean (ie for this Sportsball team), while 3 was the <em>population</em> mean (i.e. average across all possible teams). We’ll come back to this later.</p>
 <div id="little-side-note-units-and-intercepts" class="section level3">
 <h3>Little side note: units and intercepts</h3>
-<p>I wish more training in linear regression emphasized the units of the coefficents. It’s important to remember that even though we plotted the Intercept and the slope of <code>body_mass_centered</code> on the same scale in Figure <a href="#fig:simple-model"><strong>??</strong></a>, they are <em>NOT</em> the same kind of number!</p>
+<p>I wish more training in linear regression emphasized the units of the coefficents. It’s important to remember that even though we plotted the Intercept and the slope of <code>body_mass_centered</code> on the same axis above, they are <em>NOT</em> the same kind of number!</p>
 <ul>
 <li>The Intercept is in units of “Slices of Pizza”</li>
 <li>the slope of body mass is in units of “Slices of pizza x kilogram<sup>-1</sup>”</li>

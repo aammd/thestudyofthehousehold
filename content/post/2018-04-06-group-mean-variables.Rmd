@@ -64,7 +64,7 @@ plot(body_mass_centered + mean_mass, actual_per_kid)
 
 Above I generate the actual amount that each kid eats, by calculating the average and then adding some random noise on top of it. To do that, you can either generate random numbers from a normal distribution around the average `rnorm(33, average_per_kid, sd = 0.25)` or generate values with a mean of 0 and add them to the average -- I chose to do the latter^[I think that generating normal variates around the average is probably easier for students to understand, because it seems closer to a textbook definition of regression. But adding normal errors to an average is awesome because it builds our intuition: linear models are all about just adding things together. We need to start thinking of that right away!].
 
-In Figure \@ref(fig:pizza-plot) we can easily two things: the data look plausible and suitably variable, and the body masses look correct. You can see that the x-axis is actually a sum of the centered body mass and the mean -- which of course gives you back the original mass. 
+In the figure above we can easily two things: the data look plausible and suitably variable, and the body masses look correct. You can see that the x-axis is actually a sum of the centered body mass and the mean -- which of course gives you back the original mass. 
 
 We can do a quick linear model to see if we can recover the original parameters:
 ```{r simple-model, message=FALSE, warning=FALSE}
@@ -91,7 +91,7 @@ This shows us that the model estimates the original values pretty precisely. The
 
 ### Little side note: units and intercepts
 
-I wish more training in linear regression emphasized the units of the coefficents. It's important to remember that even though we plotted the Intercept and the slope of `body_mass_centered` on the same scale in Figure \@ref(fig:simple-model), they are _NOT_ the same kind of number!
+I wish more training in linear regression emphasized the units of the coefficents. It's important to remember that even though we plotted the Intercept and the slope of `body_mass_centered` on the same axis above, they are _NOT_ the same kind of number!
 
 * The Intercept is in units of "Slices of Pizza"
 * the slope of body mass is in units of "Slices of pizza x kilogram^-1^"
