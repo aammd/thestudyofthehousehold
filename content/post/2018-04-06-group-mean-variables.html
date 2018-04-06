@@ -1,0 +1,208 @@
+---
+title: Centering by group means, Part I
+description: Sportsball
+author: Andrew MacDonald
+date: '2018-04-06'
+slug: group-mean-variables
+categories: []
+tags: []
+---
+
+
+
+<div id="what-this-post-is-about" class="section level2">
+<h2>What this post is about</h2>
+<p>I have been thinking a lot lately about the importance of centering variables. This is something that has earned me eyerolls and scorn from my nearest collaborators, because it is so basic. Yet I think there is something to unpack here. To pick up on a theme of this blog – yes, it is good to recover the basics, doing stuff that everyone knows but that are basic to master before you go on to more advanced things.</p>
+<p>This post is based on simulation of data from models, then fitting models to that data. I love this approach! It helps me to understand how a statistical mocle works before you apply it to real data. So let’s do that here! I hope that this useful to anyone who tries to perform their own regression analyses.</p>
+</div>
+<div id="hmm-lets-eat-pizza" class="section level2">
+<h2>hmm let’s eat pizza!</h2>
+<div class="figure">
+<img src="/post/2018-03-20-group-mean-variables_files/pizza_cat.gif" />
+
+</div>
+<p>Suppose you are in charge of ordering pizza for this year’s Sportsball tournament. All you have is the mass of each kid, which is something that sportsball teams usually maesure. Of course, you have some data about last year’s tourney – you know the mass of each kid and about how much each one ate (idk why you have this information, but come with me on an imagination voyage just the same).</p>
+<p>First let’s generate random kids masses! Every Sportsball team has 33 players:</p>
+<pre class="r"><code>library(rstanarm)
+library(tidybayes)
+library(tidyverse)
+
+
+knitr::opts_chunk$set(message = FALSE, cache=TRUE)
+set.seed(4812)
+body_mass &lt;- rnorm(33, 40, 2.3) %&gt;% round(digits = 1)</code></pre>
+<p>(I just googled “mass of 12-year-old in kg”; turns out this is 40kg)</p>
+<p>We’re going to simulate data, and we need some plausible average values. OK, So you know from last year’s event that kids ate on average 4 slices of pizza each, and you reckon that for every kilogram of body mass they probably eat about another fifth of a slice – so if a kid is 5kg heavier, they’d probably want another whole slice.</p>
+<p>We haven’t even got to centering the model, and already it is easier to think of the varialbe as centered at the mean.</p>
+<pre class="r"><code>average_pizza &lt;- 3
+
+mass_hunger &lt;- 0.2
+mean_mass &lt;- round(mean(body_mass), 1)
+body_mass_centered &lt;- body_mass - mean_mass
+
+average_per_kid &lt;- average_pizza + mass_hunger * body_mass_centered
+
+range(average_per_kid)</code></pre>
+<pre><code>## [1] 2.18 3.98</code></pre>
+<p>OK so between 2 and 4 slices per kid – seems plausible! But of course how much a kid eats is not determined by their mass alone. They vary in many ways, including their own inclinations, how they’ve been socialized, how hard they played Sportsball that day, what they had for breakfast etc. Many small effects might well give us a normal variation around the pizza slice average<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>:</p>
+<pre class="r"><code>set.seed(4812)
+# add normal variation to the average values
+# and round because anything smaller than tenths is just silly:
+actual_per_kid &lt;- round(average_per_kid + rnorm(33, mean = 0, sd = 0.33), 1)
+
+plot(body_mass_centered + mean_mass, actual_per_kid)</code></pre>
+<p><img src="/post/2018-04-06-group-mean-variables_files/figure-html/pizza-plot-1.png" width="672" /></p>
+<p>Above I generate the actual amount that each kid eats, by calculating the average and then adding some random noise on top of it. To do that, you can either generate random numbers from a normal distribution around the average <code>rnorm(33, average_per_kid, sd = 0.25)</code> or generate values with a mean of 0 and add them to the average – I chose to do the latter<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a>.</p>
+<p>In Figure <a href="#fig:pizza-plot"><strong>??</strong></a> we can easily two things: the data look plausible and suitably variable, and the body masses look correct. You can see that the x-axis is actually a sum of the centered body mass and the mean – which of course gives you back the original mass.</p>
+<p>We can do a quick linear model to see if we can recover the original parameters:</p>
+<pre class="r"><code>pizza_data &lt;- data.frame(body_mass_centered, mean_mass, average_per_kid, actual_per_kid)
+
+
+pizza_amount &lt;- stan_lm(actual_per_kid ~ 1 + body_mass_centered,
+                        data = pizza_data,
+                        prior = R2(0.3, what = &quot;mean&quot;),
+                        chains = 2, cores = 2)
+
+pizza_amount %&gt;% 
+  gather_samples(`(Intercept)`, body_mass_centered) %&gt;%
+  ggplot(aes(y = term, x = estimate)) +
+  geom_halfeyeh() + 
+  geom_vline(xintercept = c(0.2, 3), colour = &quot;forestgreen&quot;) + 
+  theme_bw()</code></pre>
+<p><img src="/post/2018-04-06-group-mean-variables_files/figure-html/simple-model-1.png" width="672" /></p>
+<p>Green vertical lines show us the position of the true values before the simulation.</p>
+<p>This shows us that the model estimates the original values pretty precisely. The estimate of the intercept is lower than our intended value, but this is due to sampling error: we set a value of 3 for an average mass of 40kg, but the average in this sample is lower: 39.6kg. So here we are getting an estimate of the <em>sample</em> mean (ie for this Sportsball team), while 3 was the <em>population</em> mean (i.e. average across all possible teams). We’ll come back to this later.</p>
+<div id="little-side-note-units-and-intercepts" class="section level3">
+<h3>Little side note: units and intercepts</h3>
+<p>I wish more training in linear regression emphasized the units of the coefficents. It’s important to remember that even though we plotted the Intercept and the slope of <code>body_mass_centered</code> on the same scale in Figure <a href="#fig:simple-model"><strong>??</strong></a>, they are <em>NOT</em> the same kind of number!</p>
+<ul>
+<li>The Intercept is in units of “Slices of Pizza”</li>
+<li>the slope of body mass is in units of “Slices of pizza x kilogram<sup>-1</sup>”</li>
+</ul>
+<p>In other words, the slope turns the predictor into the same units as the response, while the Intercept is <em>already</em> in those units. I see so many graduate students who think that statistics is something magical, and I think that a clear understanding of what the numbers represent is a key to unlock their biological thinking from the prison of statistical fear.</p>
+<p>As an aside, the intercept is just a constant added to the model to slide the regression line up and down. We could add any constant we want! A very logical one might be the overall mean of the regression:</p>
+<pre class="r"><code>pizza_amount_mean &lt;- lm(actual_per_kid ~ 0 + mean_mass + body_mass_centered,
+                        data = pizza_data)
+
+broom::tidy(pizza_amount_mean)</code></pre>
+<pre><code>##                 term   estimate    std.error statistic      p.value
+## 1          mean_mass 0.07421651 0.0001213148  611.7681 7.658278e-65
+## 2 body_mass_centered 0.34489206 0.0024172800  142.6777 2.977745e-45</code></pre>
+<p>That gives you a sort of scale to transform the average x value into the average y value:</p>
+<pre class="r"><code>mean_mass</code></pre>
+<pre><code>## [1] 39.6</code></pre>
+<pre class="r"><code>mean_mass * 0.07379</code></pre>
+<pre><code>## [1] 2.922084</code></pre>
+<pre class="r"><code>mean(actual_per_kid)</code></pre>
+<pre><code>## [1] 2.951515</code></pre>
+<p>When you do it this way, both coefficients in the model are on the same scale: both convert body size of a player into pizza slices.</p>
+</div>
+</div>
+<div id="more-than-one-team" class="section level2">
+<h2>More than one team</h2>
+<p>Let’s say you are actually buying the pizzas for a whole competition, between five competing teams of about the same size.</p>
+<pre class="r"><code>team_data &lt;- data.frame(body_mass_centered, mean_mass, average_per_kid)
+
+
+average_pizza &lt;- 3
+mass_hunger &lt;- 0.2
+
+set.seed(4812)
+
+five_teams &lt;- rerun(5,
+                    data_frame(
+                      body_mass = rnorm(33, 40, 2.3) %&gt;% round(digits = 1),
+                      mean_mass = round(mean(body_mass), 1),
+                      body_mass_centered = round(body_mass - mean_mass, 1),
+                      average_per_kid = average_pizza + mass_hunger * body_mass_centered,
+                      actual_per_kid = round(average_per_kid + rnorm(33, 0, 0.33), 1)
+                    )
+                    ) %&gt;% 
+  set_names(paste0(&quot;team&quot;, LETTERS[1:5])) %&gt;% 
+  bind_rows(.id = &quot;team&quot;) %&gt;% 
+  tbl_df
+
+
+five_teams %&gt;% 
+  ggplot(aes(x = body_mass, y = actual_per_kid, colour = team)) +
+  theme_bw() + 
+  stat_smooth(method = &quot;lm&quot;, se = FALSE) + 
+  geom_point() + 
+  scale_color_brewer(type = &quot;qual&quot;, palette = 2)</code></pre>
+<p><img src="/post/2018-04-06-group-mean-variables_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>OK the one weird thing about these simulations is that we always assume that the mean of the response is 3, no matter what the sampled average is. We’ll get to adding more realistic scenarios later.</p>
+<pre class="r"><code>pizza_amount_five_teams &lt;- stan_lmer(
+  actual_per_kid ~ 1 + mean_mass + body_mass_centered + (1 + body_mass_centered | team),
+  data = five_teams,
+  chains = 2, cores = 2)</code></pre>
+<pre><code>## Warning: There were 15 divergent transitions after warmup. Increasing adapt_delta above 0.95 may help. See
+## http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup</code></pre>
+<pre><code>## Warning: Examine the pairs() plot to diagnose sampling problems</code></pre>
+<pre class="r"><code>coef(pizza_amount_five_teams)</code></pre>
+<pre><code>## $team
+##       (Intercept)   mean_mass body_mass_centered
+## teamA    3.639084 -0.01577895          0.2003332
+## teamB    3.637929 -0.01577895          0.2039835
+## teamC    3.637528 -0.01577895          0.1951352
+## teamD    3.636932 -0.01577895          0.2022604
+## teamE    3.639153 -0.01577895          0.1952134
+## 
+## attr(,&quot;class&quot;)
+## [1] &quot;coef.mer&quot;</code></pre>
+<pre class="r"><code>fixef(pizza_amount_five_teams)</code></pre>
+<pre><code>##        (Intercept)          mean_mass body_mass_centered 
+##         3.63839189        -0.01577895         0.19913441</code></pre>
+<pre class="r"><code>pizza_amount_five_teams %&gt;% 
+  gather_samples(`(Intercept)`, body_mass_centered, mean_mass) %&gt;%
+  ggplot(aes(y = term, x = estimate)) +
+  geom_halfeyeh() + 
+  geom_vline(xintercept = c(0.2, 3), colour = &quot;forestgreen&quot;) + 
+  theme_bw() + 
+  coord_cartesian(xlim = c(-1, 7))</code></pre>
+<p><img src="/post/2018-04-06-group-mean-variables_files/figure-html/multiple-groups-1.png" width="672" /></p>
+<p>These coefficients are .. a little hard to interpret. The slope of body mass is still OK and close to the true value.. but the intercept is a huge quantity (7!? Who can eat 7 slices of pizza?). Here, the regression is giving us an answer to an impossible question: what is the average appetite of the average sized kid (<code>body_mass_centered = 0</code>) in a group with no mass (<code>mean_mass = 0</code>). This happens to be a large number here, because the masses happen to have a (slight, insignificant) downward trend.</p>
+<p>This too-high intercept will still get us good predictions, because it gets lowered by the product of <code>mean_mass</code> (a large number) but the coefficient (a small, but negative, number). This works because the mean masses are large numbers – much larger than the centered body sizes, which are <em>differences from</em> these values:</p>
+<pre class="r"><code>five_teams$body_mass_centered %&gt;% range</code></pre>
+<pre><code>## [1] -5.5  6.1</code></pre>
+<pre class="r"><code>five_teams$mean_mass %&gt;% range</code></pre>
+<pre><code>## [1] 39.3 40.7</code></pre>
+<p>We can make this a lot simpler by <strong>CENTERING AGAIN</strong>!! This time, we centre the group means – in other words, we centre the centres!</p>
+<!-- Recalculate the group values (requires using the group intercepts and means) -->
+<pre class="r"><code>five_teams_cen &lt;- five_teams %&gt;% 
+  mutate(mean_mass_c = mean_mass - mean(mean_mass))
+
+pizza_amount_five_teams_c &lt;- stan_lmer(
+  actual_per_kid ~ 1 + mean_mass_c + body_mass_centered + (1 + body_mass_centered | team),
+  data = five_teams_cen,
+  chains = 2, cores = 2)
+
+fixef(pizza_amount_five_teams_c)</code></pre>
+<pre><code>##        (Intercept)        mean_mass_c body_mass_centered 
+##          3.0055382         -0.0176928          0.1998710</code></pre>
+<pre class="r"><code>pizza_amount_five_teams_c %&gt;% 
+  gather_samples(`(Intercept)`, body_mass_centered, mean_mass_c) %&gt;%
+  ggplot(aes(y = term, x = estimate)) +
+  geom_halfeyeh() + 
+  geom_vline(xintercept = c(0.2, 3), colour = &quot;forestgreen&quot;) + 
+  theme_bw() + 
+  coord_cartesian(xlim = c(-0.5, 3.2))</code></pre>
+<p><img src="/post/2018-04-06-group-mean-variables_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>Much better! Now the coefficients on <code>body_mass_centered</code> and <code>(Intercept)</code> are super narrow and exactly what we expect to see. The effect of <code>mean_mass</code> is still slightly negative, but very close to 0. That’s the right answer, of course – we didn’t use those values to simulate the data, and the model correctly thinks they don’t matter.</p>
+<p>We have broken up the numbers in the dataset into small bits, but the result is more interpretable model coefficients.</p>
+<pre class="r"><code>five_teams_cen$body_mass_centered %&gt;% range</code></pre>
+<pre><code>## [1] -5.5  6.1</code></pre>
+<pre class="r"><code>five_teams_cen$mean_mass_c %&gt;% range</code></pre>
+<pre><code>## [1] -0.7  0.7</code></pre>
+<p>In constrast to the above, the <code>mean_mass_c</code> values are now very close to 0, in addition to covering a very small range. In this example, where they do nothing, it amounts to something close to adding 0 to the model formula – in other words, doing nothing. Because we’ve centered them, the model is free to use the intercept to represent the mean of the response, and the other terms can represent differences to this mean.</p>
+<div class="figure">
+<img src="/post/2018-03-20-group-mean-variables_files/yo_dawg.jpg" />
+
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>people who think that pizza slices ought to follow a poisson distribution clearly are not eating pizza in the same way as I do<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>I think that generating normal variates around the average is probably easier for students to understand, because it seems closer to a textbook definition of regression. But adding normal errors to an average is awesome because it builds our intuition: linear models are all about just adding things together. We need to start thinking of that right away!<a href="#fnref2">↩</a></p></li>
+</ol>
+</div>
