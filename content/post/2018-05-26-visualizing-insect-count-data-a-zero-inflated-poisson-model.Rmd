@@ -1,0 +1,415 @@
+---
+title: Visualizing insect count data — a zero-inflated poisson model
+author: Andrew MacDonald
+date: '2018-05-26'
+slug: visualizing-insect-count-data-a-zero-inflated-poisson-model
+categories:
+  - R
+  - science
+  - question
+tags: []
+description: ''
+bibliography: visual-bayes-refs.bib
+---
+
+Most ecologists would agree: it's really hard to predict which animals are going to be where, and how many of them you might find when you look. Lately, there has been lots of interest in using mixed-effects models to make these predictions. The advantage is that these models are of a kind that most biologists already know about. The disadvantage is that they can be... a little _larger_ than what we're used to. They push at the boundaries both of what is currently employed in the literature, and what is described in most statistical textbooks.
+
+This blog post is my attempt to push those boundaries for my favourite system. I plan to both extend this model and/or to replicate it for many different datasets, so i want to make sure I get the foundation right. To that end, I'd love to hear any comments or feedback that you have, dear reader!
+
+### The data I'm using
+
+I'm going to work today with one of my favourite datasets, which was happily published on Zenodo a few years ago [@https://doi.org/10.5281/zenodo.168039]. It comes from work my doctoral supervisor, Dr Diane Srivastava, did on an island off the coast of São Paulo state, in Brazil, called Ilha do Cardoso. Here I'm going to access the data from the github repository, but if you'd like to use it please use the published version at Zenodo^[I feel like I should be able to read data straight out of Zenodo, but that doesn't seem to be possible?].
+
+![](/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/cardoso_clouds.jpg)
+( _The beautiful Ilha do Cardoso. Please do note that you can't see the hordes of biting flies in this photograph_ )
+
+These data are collected from plants called Bromeliads. Each bromeliad catches water in its cuplike leaves, and a small ecosystem assembles within these leafy puddles: a freshwater system in minature. When we sample bromeliads, we usually measure the size of the plant (the best is to measure the maximum volume a plant can hold), then we use a knife to carefully tear it to peices and catch everything which is inside it! In this dataset, extra care was taken to get an approximate idea of how big each animal was, by measuring the biomass of at least some individuals.
+
+#### Load and look at the data
+
+This is a rich and complicated dataset, and we're only concerned with a very coarse detail of it: how can we predict which species are in which plants?  We're using one variable for each plant ("maximum volume") and one for each insect ("approximate biomass").
+
+```{r, message=FALSE, warning = FALSE}
+library(tidyverse)
+
+macroinvertebrate_names_mass <- read_csv("https://raw.githubusercontent.com/SrivastavaLab/cardoso2008/v1.0.0/data/macroinvertebrate_names_mass.csv")
+abundance <- read_csv("https://raw.githubusercontent.com/SrivastavaLab/cardoso2008/v1.0.0/data/abundance.csv")
+environment <- read_csv("https://raw.githubusercontent.com/SrivastavaLab/cardoso2008/v1.0.0/data/environmental_variables.csv")
+
+# reorganize and simplify the data:
+# environment %>% head
+
+# how to treat body size here? the simplest thing might be a weighted average
+species_biomasses <- abundance %>% 
+  left_join(macroinvertebrate_names_mass %>% 
+              select(sp_code, morphospecies, average_percapita_biomass), by = "sp_code") %>% 
+  mutate(total_biomass = average_percapita_biomass * abundance) %>% 
+  group_by(morphospecies) %>% 
+  summarize(species_average_biomass = sum(total_biomass) / sum(abundance))
+
+cardoso_island <- abundance %>% 
+  left_join(macroinvertebrate_names_mass %>% 
+              select(sp_code, morphospecies), by = "sp_code") %>% 
+  # drop non-macroinvertebrates
+  filter(!(morphospecies %>% str_detect("Aquatic mite|Elpidium"))) %>% 
+  # average away species size categories
+  group_by(morphospecies, Bromeliad) %>% 
+  summarize(abundance = sum(abundance)) %>% 
+  ungroup() %>% 
+  left_join(species_biomasses, by = "morphospecies") %>%
+    # convert biomass to mg
+  mutate(approx_biomass_mg = species_average_biomass * 1000) %>% 
+  ungroup %>% 
+  # centre biomass
+  mutate(approx_biomass_mg_log = log(approx_biomass_mg),
+         approx_biomass_mg_c = approx_biomass_mg_log - mean(approx_biomass_mg_log)) %>% glimpse %>% 
+  # complete with missing zeros
+  select(-species_average_biomass, -approx_biomass_mg_log) %>% 
+  complete(nesting(morphospecies, approx_biomass_mg, approx_biomass_mg_c), Bromeliad, fill = list(abundance = 0)) %>% 
+  # add bromeliad sizes
+  left_join(environment %>% select(Bromeliad, Maximum_volume)) %>% 
+  # use the log maximum volume, and centre it
+  mutate(max_vol_log = log(Maximum_volume),
+         max_vol_log_c = max_vol_log - mean(max_vol_log))
+
+cardoso_island %>% 
+  select(Bromeliad, Maximum_volume, max_vol_log_c, morphospecies, approx_biomass_mg, approx_biomass_mg_c, abundance) %>% 
+  sample_n(10) %>% 
+  knitr::kable(.)
+```
+
+OK so the data makeover process is a little elaborate, and to keep this post short I'm not going to discuss it too much. Some of the highlights of the code above include:
+
+* dropping the "microinvertebrate" species (mites and ostracods) because they are just doing very different things to our insects
+* calculating a weighted average biomass for every animal species
+* log-transforming, then centering, both biomass and bromeliad size.
+
+#### A few nice figures
+
+Here are two figures to introduce you to this dataset:
+
+```{r}
+cardoso_island %>%  
+  mutate(cut_logbio = cut(approx_biomass_mg_c, breaks = 3)) %>% 
+  ggplot(aes(x = max_vol_log_c, y = abundance, fill = approx_biomass_mg_c, group = morphospecies)) + 
+  geom_line(stat = "smooth", method = "glm", method.args = list(family = "poisson"), alpha = 0.3) + 
+  geom_point(pch = 21, size = 2, alpha = 0.8) + 
+  coord_trans(y = scales::log1p_trans()) + 
+  theme_minimal() + 
+  scale_fill_viridis_c() + 
+  facet_wrap(~cut_logbio) + 
+  guides(fill = FALSE)
+```
+
+Here the animals are split up into three categories: small, medium and large (they're also coloured to match their body size). Log bromeliad volume is on the x-axis, and the count of each species is on the y-axis^[Also, apparently there is a way to **scale a y-axis** to log(x + 1), which allows you to represent 0s, using `scales::log1p_trans()` !!? did _you_ know about this?! Why was I not informed!!?]. I also added a poisson regression for each species individually, which (among other things) helps to point out just how many there are (54 in fact).
+
+Here are a few things I take away from this figure:
+
+* larger things are rarer. Not at all surprising! This is a classic result in community ecology
+* (nearly almost) everything is more common when volume is larger. Again, a classic finding.
+* there's quite a lot of "noise" around those lines
+* there's a lot of zeroes
+
+Its also worth noticing the two warnings I got above. Apparently some animals were found only in the largest plants, which leads to wild estimates of slopes in the GLMs. We don't actually expect to ALWAYS find such a species only in the very largest plant; clearly, some regularization of these slopes would be wise. 
+
+We can also visualize these presence/absences in a different way: forget the numbers of individuals, and instead count how many plants yielded each species.  This is what is sometimes called the "frequency" of a species. 
+
+```{r}
+cardoso_island %>% 
+  group_by(morphospecies, approx_biomass_mg) %>% 
+  summarize(frequency = sum(abundance > 0),
+            n = n()) %>% 
+  ggplot(aes(x = approx_biomass_mg, y = frequency)) + geom_point() + 
+  scale_x_log10() +
+  geom_hline(yintercept = c(0,25))
+```
+
+There are 25 plants, so the frequency of each animal must be between 25 (present everywhere) and 1 (only found the once). As you can see, these latter are pretty common. Also unsurprisingly, the frequency is related to body size: larger things are once again rarer.
+
+### The model I'm using
+
+How shall we write a model for this system? There are two separate processes that determine how many insect larvae we find in a plant: 
+
+1. Does a female choose to lay eggs in this plant?
+2. Do the eggs survive once in there? 
+
+I want to point out that these are only two possible mechanisms. For example, smaller plants might be rejected more by adult females -- or, they may be harder to find in the forest, and the females never make a "decision" at all.
+
+My only point here is that it makes sense to consider a zero-generating process **AND** a count process. I don't want to imply that I think we can actually separate the two from observational data, e.g. no way can we ascribe the zeros to "female choice" or something like that. All I'm saying is the data is bound to have a lot of zeros in it, for a host of perfectly reasonable biological reasons which we know about already.
+
+#### What does a Zero-Inflated Poisson look like? 
+
+Zero-Inflated Poisson (aka "ZI Poisson" aka "ZIP") models allow us to have probability of getting zero -- otherwise we get a number (which might _itself_ be zero or might be a number from a Poisson distribution). In Statistical Rethinking, McElreath gives a great example of a monastary that produces copies of books. Copies are slow to make, so sometimes even when the monks are working, they finish 0 manuscripts. On good days, though, they do finish few -- this is the "count process". But sometimes, quite plausibly, the monks get too drunk to copy manuscripts at all -- and those days are guaranteed to get 0. In other words:
+
+$$
+\begin{align}
+\Pr(y_{ij} = 0) &= \pi_{ij} + (1 - \pi_{ij}) e^{-\lambda_{ij}} \\
+\Pr(y_{ij} = h_i) &= (1 - \pi_{ij})\frac{\lambda_{ij}^{h_i}e^{-\lambda{ij}}}{h_i!} \\
+\end{align}
+$$
+
+So for our purposes, the number of insect larvae ($y_{ij}$) of species $i$ found in plant $j$ depends on two things: the probability that this species would be found in that plant ($\pi_{ij}$) and the expected number of larvae of that species in that plant ($\lambda_{ij}$). Both of these quantities can (hopefully??) be predicted from some information about the insects and the plants themselves: in this case, the size of the insect and the volume of the plant:
+
+$$
+\begin{align}
+y_{ij} &= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
+\mbox{logit}(\pi_{ij}) &= \beta_{\pi0} + 
+  \beta_{\pi1}\mbox{body size}_i + 
+  \beta_{\pi2}\mbox{volume}_j + 
+  \beta_{\pi3} \mbox{bodysize}_i \times \mbox{volume}_j + 
+  \gamma_{\pi0j} + 
+  \alpha_{\pi0i} + 
+  \alpha_{\pi1i} \mbox{bodysize} + 
+  \alpha_{\pi2i}\mbox{volume} + 
+  \alpha_{\pi3i}\mbox{bodysize}\times\mbox{volume} \\
+\gamma_{\pi0} &\sim \mbox{Normal}(0, \sigma_{\pi\mbox{brom}})\\
+\alpha_{\pi} &\sim \mbox{MVNormal}(0, \Sigma_4)\\
+\mbox{log}(\lambda_{ij}) &= \beta_{\lambda0} + 
+  \beta_{\lambda1}\mbox{body size}_i + 
+  \beta_{\lambda2}\mbox{volume}_j + 
+  \beta_{\lambda3} \mbox{bodysize}_i \times \mbox{volume}_j + 
+  \gamma_{\lambda0j} + 
+  \alpha_{\lambda0i} + 
+  \alpha_{\lambda1i} \mbox{bodysize} + 
+  \alpha_{\lambda2i}\mbox{volume} + 
+  \alpha_{\lambda3i}\mbox{bodysize}\times\mbox{volume} \\
+\gamma_{\lambda0} &\sim \mbox{Normal}(0, \sigma_{\lambda\mbox{brom}})\\
+\alpha_{\lambda} &\sim \mbox{MVNormal}(0, \Sigma_4)
+
+\end{align}
+$$
+
+WHEW ALRIGHT that equation took **a lot** longer to type out than I hoped! I hope that it helps communicate what I have in mind. Here is a description in words:
+
+1. The abundance of an insect species in a plant is a zero-inflated poisson distribution
+1. the presence of an insect depends on the average probability of presence for the average insect in the average plant, plus changes for that insect's body size, the plant's size, and their interaction
+1. in _additon_, each bromeliad will differ slightly 
+1. in addition, each species will also differ slightly. Species will also have variable relationships with habitat size, body size and their interaction.
+1. when present, the abundance of each species in each plant depends on all the same things
+1. presence/absence and abundance depend on the same things, but otherwise are totally independent.
+
+That last point is worth discussing. There are good reasons to relax it, and in fact that's what I want to try to do. This post was born out of my desire to do so correctly.
+
+#### One Weird Trick to make Zero Inflated Models Even Better
+
+Often we model the zero-producing and the count-producing parts separately. Sometimes that makes sense: for example, among monks "handwriting speed" and "eagerness for benders" are probably not best predicted by the same things. On the other hand, sometimes it makes sense that they should be related. In bromelaids, if a female declines to oviposit in a plant, it may be because the plant lacks resources, or possesses predators, that would reduce the abundance of larvae that **do** end up there. So how can we relate the two? 
+
+In the _wonderful_ `brms` package, Paul Bürkner introduces an extended syntax for multilevel models, which allows you to extend correlations of group-level effects to different parts of the model (described in more detail in Bürkner [-@Burkner2017-zx]). What this means is that we can, for example, change the bromeliad-level intercepts from this:
+
+$$
+\begin{align}
+\gamma_{\pi0} &\sim \mbox{Normal}(0, \sigma_{\pi\mbox{brom}})\\
+\gamma_{\lambda0} &\sim \mbox{Normal}(0, \sigma_{\lambda\mbox{brom}})\\
+\end{align}
+$$
+
+to this:
+
+$$
+\begin{pmatrix}
+\gamma_{\pi0}     \\
+\gamma_{\lambda0}   \\
+\end{pmatrix}    \sim  \mbox{MVNormal}\left[
+\begin{pmatrix}
+0\\
+0\\
+\end{pmatrix},
+\Sigma_2
+\right]
+$$
+
+In other words, now they are correlated with each other. We might go even farther, and suggest that this correlation might be positive: a bromeliad which has below-average species presences, should also have below-average species abundances.  But even letting the model know that responses might be correlated with each other means that we gain a large advantage: we let information "flow" between the two halves of the model. We also increase the potential for shrinkage, reducing the number of effective parameters we have to deal with.
+
+### the Joint Prior Distribution
+
+Now we have a dataset and a model that we might fit to it. Before we fire up the sampling engine, is there a way to better understand this model? Maybe even get some sensible priors while we are at it? I was greatly inspired recently by reading Visualization in Bayesian Workflow by Gabry et al. [-@Gabry2017-xv]^[could *not* get `knitcitations` to correctly identify this citation; anyone have a different experience when pointing `knitciations` to arXiv? or Zenodo?]. I'm going to follow their initial step here: selecting priors for my model, and simulating from them to see if I can get data that is "vaguely" like my observed data.
+
+Just to illustrate that there's been some learning here, i'd like to share a picture of the first simulations I made from this model, using priors that i _thought_ were OK priors:
+
+![](/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/impossible_points.png)
+
+Alright so among the small animals there are.. about 100 million individuals?? and the larger animals are gone altogether -- i suspect because their predicted abundance was so insane that it caused integer overflow and returned NA. The lesson my dear friends is that your primate brain does not understand the log scale, please don't kid yourself.
+
+Seriously, I understand that we want our priors to be vague but this seems excessive. Gabry et al. have a concrete solution that we can try: create a "flipbook" of some predicted datasets, sampled from your priors, and see if you can choose priors that get you "close". In their words:
+
+>  In particular, we say that a prior leads to a _weakly informative joint prior data generating
+process_ if draws from the prior data generating distribution p(y) could represent any data
+set that could plausibly be observed. As with the standard concept of weakly informative
+priors, it’s important that this prior predictive distribution for the data has at least some
+mass around extreme but plausible data sets. On the other hand, there should be no
+mass on completely implausible data sets. 
+
+Alright, let me try to do this! 
+
+## Simulating data from a ZIPoisson model from Bromeliad animals 
+
+To do this, I wrote a large R function, included below. Note that I didn't want to include arguments to control the priors in the model -- instead, they're described inside the function itself. That's because I'm just interested in finding some values that are close to reality, and to the data -- I wanted to remove any temptation to try some kind of trashcan homemade grid-search.
+
+```{r}
+simulate_one_cardoso <- function(.cardoso_island = cardoso_island){
+  
+  spp_names <- unique(.cardoso_island$morphospecies)
+  nspp <- length(spp_names)
+  bromeliad_names <- unique(.cardoso_island$Bromeliad)
+  nbrom <- length(bromeliad_names)
+  
+  # simulate from the parameters:
+  b_intercept <- rnorm(1, 1, 0.2)
+  b_max_water_c <- rnorm(1, 0.8, 0.2)
+  b_BS_mean_scale <- rnorm(1, -0.4, 0.2)
+  b_max_water_c_by_BS_mean_scale <- rnorm(1, 0, 0.2)
+  # b_mean_lg_max <- rnorm(1, 0, 2)
+  # b_mean_lg_max_by_max_water_c <- rnorm(1, 0, 2)
+  b_zi_intercept <- rnorm(1, -1, 0.2)
+  b_zi_max_water_c <- rnorm(1, 0.3, 0.3)
+  b_zi_BS_mean_scale <- rnorm(1, -0.2, 0.2)
+  b_zi_max_water_c_by_BS_mean_scale <- rnorm(1, 0, 0.2)
+  # b_zi_mean_lg_max <- rnorm(1, 0, 2)
+  # b_zi_mean_lg_max_by_max_water_c <- rnorm(1, 0, 2)
+  
+  # simulate from hyperpriors:
+  
+  # simulate the correlations
+  species_corrs <- rethinking::rlkjcorr(1, 8)
+  bromeliad_corrs <- rethinking::rlkjcorr(1, 2)
+  
+  # simulate the standard deviations
+  
+  species_sd <- rexp(8, 5)
+  bromeliad_sd <- rexp(2, 4)
+  
+  # now matrix multiply to get covariance matrix
+  species_Sigma <- diag(species_sd) %*% species_corrs %*% diag(species_sd)
+  
+  bromeliad_Sigma <- diag(bromeliad_sd) %*% bromeliad_corrs %*% diag(bromeliad_sd)
+  
+  # use MASS_mvnorm to simulate group effects. these are centered on 0 because
+  # they are going to modify the fixed effects in the model for each group
+  # (right??)
+  
+  species_values <- MASS::mvrnorm(nspp, mu = rep(0, 8), Sigma = species_Sigma)
+  
+  bromeliad_values <- MASS::mvrnorm(nbrom, mu = rep(0, 2), Sigma = bromeliad_Sigma)
+  
+  # add names to the random effects
+  ranef_names <- c(
+    "spp_intercept",
+    "spp_BS_mean_scale", 
+    "spp_max_water_c",
+    "spp_max_water_c_by_BS_mean_scale",
+    "spp_zi_intercept",
+    "spp_zi_BS_mean_scale", 
+    "spp_zi_max_water_c",
+    "spp_zi_max_water_c_by_BS_mean_scale"
+  )
+  
+  species_effects <- species_values %>% 
+    as.data.frame() %>% 
+    set_names(ranef_names) %>% 
+    mutate(morphospecies = spp_names)
+  
+  bromeliad_effects <- bromeliad_values %>% 
+    as.data.frame %>% 
+    set_names(c("brom_intercept", "brom_zi_intercept")) %>% 
+    mutate(Bromeliad = bromeliad_names)
+  
+  # combine with bromeliad and body size data
+  nrows_cardoso <- nrow(.cardoso_island)
+  
+  cardoso_simulated <- .cardoso_island %>% 
+    select(morphospecies, Bromeliad, approx_biomass_mg_c, max_vol_log_c) %>% 
+    # add in every constant
+    mutate(
+      b_intercept = b_intercept,
+      b_max_water_c = b_max_water_c,
+      b_BS_mean_scale = b_BS_mean_scale,
+      b_max_water_c_by_BS_mean_scale = b_max_water_c_by_BS_mean_scale,
+      b_zi_intercept = b_zi_intercept,
+      b_zi_max_water_c = b_zi_max_water_c,
+      b_zi_BS_mean_scale = b_zi_BS_mean_scale,
+      b_zi_max_water_c_by_BS_mean_scale = b_zi_max_water_c_by_BS_mean_scale
+    ) %>% 
+    # add in the groups
+    left_join(species_effects, by = "morphospecies") %>% 
+    left_join(bromeliad_effects, by = "Bromeliad") %>% 
+    # calculate the average effect of each part:
+    mutate(
+      # zero-inflated part:
+      zi = 
+        b_zi_intercept + 
+        b_zi_max_water_c * max_vol_log_c + 
+        b_zi_BS_mean_scale * approx_biomass_mg_c + 
+        b_zi_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c + 
+        # groups
+        spp_zi_intercept + 
+        spp_zi_BS_mean_scale * approx_biomass_mg_c + 
+        spp_zi_max_water_c * max_vol_log_c + 
+        spp_zi_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c,
+      count = 
+        b_intercept + 
+        b_max_water_c * max_vol_log_c + 
+        b_BS_mean_scale * approx_biomass_mg_c + 
+        b_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c + 
+        # groups
+        spp_intercept + 
+        spp_BS_mean_scale * approx_biomass_mg_c + 
+        spp_max_water_c * max_vol_log_c + 
+        spp_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c,
+    ) %>%
+    # zi is on the logit scale, and count is on the log scale. I need to simulate the liklihood.. how do i do that?
+    mutate(
+      # does it even colonize??
+      p_nonzero = rethinking::inv_logit(zi),
+      present = rbinom(nrows_cardoso, 1, p_nonzero),
+      # similarly, we transform the counts onto the observation scale then simulate them
+      possible_abd = rpois(nrows_cardoso, lambda = exp(count)),
+      abundance = present * possible_abd
+    )
+}
+```
+
+We call this function once, and it spits out a single imitation dataset. It uses real body sizes and real volumes, but it invents new abundance values based on the values it happened to draw from the priors:
+
+```{r}
+fake_cardoso <- simulate_one_cardoso()
+
+knitr::kable(head(fake_cardoso))
+```
+
+We can also do this multiple times, and create the very "flipbook" to which Gabry et al. encourage us: 
+
+```{r}
+cardoso_simulations <- purrr::rerun(simulate_one_cardoso(), .n = 10)
+
+library(gganimate)
+flipbook <- cardoso_simulations %>% 
+  map(~ .x %>% select(max_vol_log_c, abundance, approx_biomass_mg_c)) %>% 
+  bind_rows(.id = "sim") %>% 
+  mutate(cutbio = cut(approx_biomass_mg_c, breaks = 3)) %>% 
+  ggplot(aes(x = max_vol_log_c, y = abundance, fill = approx_biomass_mg_c, frame = sim)) + 
+  geom_point(pch = 21, size = 2.3, alpha = 0.8) + facet_wrap(~cutbio) + scale_fill_viridis_c() + 
+  coord_trans(y = scales::log1p_trans(), limy = c(0, 1e4)) + guides(fill = FALSE)
+  
+gganimate(flipbook, interval = .2, filename = here::here("static", "img", "flipbook.gif"))
+```
+
+![](/img/flipbook.gif)
+
+Uh, not bad, I guess! In general, but not always, the large things (on the right) are rarer. Mostly always, animals are more common when plants are larger. Abundances are pretty frequently insanely high, which is a good thing (5000 is already practically impossible).  I'd stress again that at this point, the model does no more than catch basic information that any ecologist should be able to describe.
+
+#### Lessons I've learned
+
+* it's _very_ hard to reason about sensible values for intercepts when working on the log scale
+* it's _even harder_ when your variables are on different scales! in an earlier version of this attempt, I logged then centred bromeliad volume but did NOTHING to insect biomass -- this made it almost impossible to set a reasonable prior on the interaction, since both had different magnitudes **and** different centres.
+* back-of-the envelope (ie informal, approximate) calculations can be super helpful when reckoning out where to place a prior. For example, I reckoned that the average size insect should be pretty common -- max about 200 per plant (so about 5.3 on a log scale) while the biggest insects should be rare (around 2 per plant, 0.6 on a log scale). So `(5.3 - 0.6) / (0 - 2.66)` is about `-1.4`, which gives us a decent guess for the coefficient on the effect of body size. Notice that this isn't based totally on the data, but also on my own reckoning based on working with the system, independently of this dataset.
+* Not only do I not understand log scales and logit scales, *I don't understand multiplication*. I was still getting enormous values for predicted counts, and it was because the variance on my random effects was so high that the 2-way interaction of body size X volume was still creating large values. To correct this, I had to tune the rate parameters up very high on the random effects, essentially saying that species are not THAT different from each other. 
+
+## Questions for You, dear Reader
+
+* These priors clearly produce a very vague prediction, but some of them LOOK awefully tight! for example `normal(0.8, 0.2)` or `exponential(5)`. Are reviewers going to think I'm cheating? 
+* does it make sense to include body size in the random effect? or should it just be the effects of habitat size and the interaction with body size that is included there?
+* This model is already pretty huge -- and it has many more parameters than there are datapoints. I understand that this is not automatically a Bad Thing for a bayesian, yet I'm still a little nervous about employing these methods. 
+
+## References
+
+  
