@@ -16,6 +16,8 @@ Most ecologists would agree: it's really hard to predict which animals are going
 
 This blog post is my attempt to push those boundaries for my favourite system. I plan to both extend this model and/or to replicate it for many different datasets, so i want to make sure I get the foundation right. To that end, I'd love to hear any comments or feedback that you have, dear reader!
 
+> **EDIT:** in discussing this post with a friend, I spit out the following summary of what I'm trying to do. Let me know if this makes sense to you: _I use my domain knowledge as an ecologist to write out a linear model. Then I use my knowledge and the model to write the priors. Then I use the priors, the model and the data to calculate the posterior distribution._
+
 ### The data I'm using
 
 I'm going to work today with one of my favourite datasets, which was happily published on Zenodo a few years ago [@https://doi.org/10.5281/zenodo.168039]. It comes from work my doctoral supervisor, Dr Diane Srivastava, did on an island off the coast of São Paulo state, in Brazil, called Ilha do Cardoso. Here I'm going to access the data from the github repository, but if you'd like to use it please use the published version at Zenodo^[I feel like I should be able to read data straight out of Zenodo, but that doesn't seem to be possible?].
@@ -183,12 +185,14 @@ WHEW ALRIGHT that equation took **a lot** longer to type out than I hoped! I hop
 
 1. The abundance of an insect species in a plant is a zero-inflated poisson distribution
 1. the presence of an insect depends on the average probability of presence for the average insect in the average plant, plus changes for that insect's body size, the plant's size, and their interaction
-1. in _additon_, each bromeliad will differ slightly 
+1. in _addition_, each bromeliad will differ slightly 
 1. in addition, each species will also differ slightly. Species will also have variable relationships with habitat size, body size and their interaction.
 1. when present, the abundance of each species in each plant depends on all the same things
 1. presence/absence and abundance depend on the same things, but otherwise are totally independent.
 
 That last point is worth discussing. There are good reasons to relax it, and in fact that's what I want to try to do. This post was born out of my desire to do so correctly.
+
+**EDIT**: after writing this out, I realized that it doesn't make a lot of sense to talk about varying slopes among species for the abundance ~ bodysize relationship. That's because each species in this dataset has only one species-level trait for body mass. It might make more sense for a different system: say we were measuring wood density on individual trees, and were modelling instead of abundance something like their biomass or fecundity. In other words, it only makes sense to define variable slopes when there are within-group measurements of both things!^[Worth noting that in this dataset there actually _was_ measurements of biomass within each species, across the different bromeliads. However I'm trying to develop a model for use on other datasets which are nowhere near as detailed, so that's not useful right now.]
 
 #### One Weird Trick to make Zero Inflated Models Even Better
 
@@ -270,12 +274,12 @@ simulate_one_cardoso <- function(.cardoso_island = cardoso_island){
   # simulate from hyperpriors:
   
   # simulate the correlations
-  species_corrs <- rethinking::rlkjcorr(1, 8)
+  species_corrs <- rethinking::rlkjcorr(1, 6)
   bromeliad_corrs <- rethinking::rlkjcorr(1, 2)
   
   # simulate the standard deviations
   
-  species_sd <- rexp(8, 5)
+  species_sd <- rexp(6, 5)
   bromeliad_sd <- rexp(2, 4)
   
   # now matrix multiply to get covariance matrix
@@ -287,18 +291,18 @@ simulate_one_cardoso <- function(.cardoso_island = cardoso_island){
   # they are going to modify the fixed effects in the model for each group
   # (right??)
   
-  species_values <- MASS::mvrnorm(nspp, mu = rep(0, 8), Sigma = species_Sigma)
+  species_values <- MASS::mvrnorm(nspp, mu = rep(0, 6), Sigma = species_Sigma)
   
   bromeliad_values <- MASS::mvrnorm(nbrom, mu = rep(0, 2), Sigma = bromeliad_Sigma)
   
   # add names to the random effects
   ranef_names <- c(
     "spp_intercept",
-    "spp_BS_mean_scale", 
+    # "spp_BS_mean_scale", 
     "spp_max_water_c",
     "spp_max_water_c_by_BS_mean_scale",
     "spp_zi_intercept",
-    "spp_zi_BS_mean_scale", 
+    # "spp_zi_BS_mean_scale", 
     "spp_zi_max_water_c",
     "spp_zi_max_water_c_by_BS_mean_scale"
   )
@@ -342,17 +346,15 @@ simulate_one_cardoso <- function(.cardoso_island = cardoso_island){
         b_zi_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c + 
         # groups
         spp_zi_intercept + 
-        spp_zi_BS_mean_scale * approx_biomass_mg_c + 
         spp_zi_max_water_c * max_vol_log_c + 
         spp_zi_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c,
       count = 
         b_intercept + 
         b_max_water_c * max_vol_log_c + 
-        b_BS_mean_scale * approx_biomass_mg_c + 
+        b_BS_mean_scale * approx_biomass_mg_c +
         b_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c + 
         # groups
         spp_intercept + 
-        spp_BS_mean_scale * approx_biomass_mg_c + 
         spp_max_water_c * max_vol_log_c + 
         spp_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c,
     ) %>%
@@ -397,12 +399,173 @@ gganimate(flipbook, interval = .2, filename = here::here("static", "img", "flipb
 
 Uh, not bad, I guess! In general, but not always, the large things (on the right) are rarer. Mostly always, animals are more common when plants are larger. Abundances are pretty frequently insanely high, which is a good thing (5000 is already practically impossible).  I'd stress again that at this point, the model does no more than catch basic information that any ecologist should be able to describe.
 
+We can also look at this a different way: again by looking at the prescences of different species:
+
+```{r}
+frequency_simulation <- cardoso_simulations %>% 
+  map(~ .x %>% select(max_vol_log_c, abundance, morphospecies, approx_biomass_mg_c)) %>% 
+  bind_rows(.id = "sim") %>% 
+  group_by(sim, morphospecies, approx_biomass_mg_c) %>% 
+  summarize(frequency = sum(abundance > 0),
+            n = n()) %>% 
+  ggplot(aes(x = approx_biomass_mg_c, y = frequency, frame = sim)) +
+  geom_point(aes(x = approx_biomass_mg_c, y = frequency),
+             data = cardoso_island %>% 
+               group_by(morphospecies, approx_biomass_mg_c) %>% 
+               summarize(frequency = sum(abundance > 0),
+                         n = n()),
+             colour = "lightgrey",
+             inherit.aes = FALSE) +
+  geom_point() +
+  geom_hline(yintercept = c(0,25)) + 
+  theme_bw()
+
+gganimate(frequency_simulation, .interval = 0.1)
+```
+
+
 #### Lessons I've learned
 
 * it's _very_ hard to reason about sensible values for intercepts when working on the log scale
 * it's _even harder_ when your variables are on different scales! in an earlier version of this attempt, I logged then centred bromeliad volume but did NOTHING to insect biomass -- this made it almost impossible to set a reasonable prior on the interaction, since both had different magnitudes **and** different centres.
 * back-of-the envelope (ie informal, approximate) calculations can be super helpful when reckoning out where to place a prior. For example, I reckoned that the average size insect should be pretty common -- max about 200 per plant (so about 5.3 on a log scale) while the biggest insects should be rare (around 2 per plant, 0.6 on a log scale). So `(5.3 - 0.6) / (0 - 2.66)` is about `-1.4`, which gives us a decent guess for the coefficient on the effect of body size. Notice that this isn't based totally on the data, but also on my own reckoning based on working with the system, independently of this dataset.
 * Not only do I not understand log scales and logit scales, *I don't understand multiplication*. I was still getting enormous values for predicted counts, and it was because the variance on my random effects was so high that the 2-way interaction of body size X volume was still creating large values. To correct this, I had to tune the rate parameters up very high on the random effects, essentially saying that species are not THAT different from each other. 
+* I set the same SD for all the random coefficients within one group at the same time -- so, for example, all the 8 parameters for each species (four for abundance, four for presence/absence). I guess that what I could have done was to actually set a different SD for every random coefficient, rather that setting one random effect SD for all the effects in each group. That would have been much more laborious of course, but then again that's the size the model actually is. 
+
+## Fitting this model
+
+How close are these priors to the posterior distribution? Does this model sample well, and does it make sensible predictions? The only way to find out is to fit it:
+
+```{r fit-brms, eval=FALSE}
+library(brms)
+names(cardoso_island)
+
+bf_zip_cardoso <- bf(abundance ~ 0 + intercept +
+                            max_vol_log_c + 
+                            approx_biomass_mg_c +
+                            max_vol_log_c:approx_biomass_mg_c +
+                            (1 + max_vol_log_c + max_vol_log_c:approx_biomass_mg_c|s|morphospecies) +
+                            (1|b|Bromeliad),
+                          zi ~ 0 + intercept +
+                            max_vol_log_c + 
+                            approx_biomass_mg_c +
+                            max_vol_log_c:approx_biomass_mg_c +
+                            (1 + max_vol_log_c + max_vol_log_c:approx_biomass_mg_c|s|morphospecies) +
+                            (1|b|Bromeliad),
+                          family = "zero_inflated_poisson")
+
+get_prior(bf_zip_cardoso, data = cardoso_island)
+
+ZIP_prior_cardoso <- c(
+  set_prior("normal(1, 0.2)", class = "b",   coef = "intercept"),
+  set_prior("normal(0.8, 0.2)", class = "b",   coef = "max_vol_log_c"),
+  set_prior("normal(-0.4, 0.2)", class = "b",   coef = "approx_biomass_mg_c"),
+  set_prior("normal(0, 0.2)", class = "b",   coef = "max_vol_log_c:approx_biomass_mg_c"),
+  # zi part
+  set_prior("normal(-1, 0.2)", class = "b", dpar = "zi",  coef = "intercept"),
+  set_prior("normal(0.3, 0.3)", class = "b", dpar = "zi",  coef = "max_vol_log_c"),
+  set_prior("normal(-0.2, 0.2)", class = "b", dpar = "zi",  coef = "approx_biomass_mg_c"),
+  set_prior("normal(0, 0.2)", class = "b", dpar = "zi",  coef = "max_vol_log_c:approx_biomass_mg_c"),
+  set_prior("lkj(4)",       class = "cor"),
+  set_prior("exponential(5)", group = "morphospecies", class = "sd"),
+  set_prior("exponential(4)", group = "Bromeliad", class = "sd")
+)
+
+ZIP_cardoso<- brm(bf_zip_cardoso,
+                  data = cardoso_island,
+                  cores = 3, chains = 3,
+                  iter = 5000,
+                  sample_prior = TRUE,
+                  prior = ZIP_prior_cardoso,
+                  # could try to manipulate these back down if it works OK
+                  control = list(#max_treedepth = 15,
+                    adapt_delta = 0.95))
+
+readr::write_rds(ZIP_cardoso, here::here("content", "post" , "ZIP_cardoso.rds"))
+```
+
+```{r}
+ZIP_cardoso <- readr::read_rds(here::here("content", "post", "ZIP_cardoso.rds"))
+```
+
+
+```{r}
+library(tidybayes)
+library(ggridges)
+
+parameters(ZIP_cardoso)
+
+gather_samples(ZIP_cardoso, `b_.*|prior_b_.*`, regex = TRUE) %>% 
+  ungroup() %>% 
+  mutate(is_prior = str_detect(term, "prior"),
+         term = str_replace(term, "prior_", "")) %>% 
+  ggplot(aes(x = estimate, y = term, fill = is_prior)) +
+  geom_vline(xintercept = 0) + 
+  geom_density_ridges() +    
+  theme_minimal() + 
+  scale_fill_brewer(type = "qual", palette = 2)
+```
+In this quick little plot, we see the coefficients that model the response of the average insect in the average bromeliad^[These are what is sometimes called "fixed" effects.]. I suppose that it is encouraging that in every case the posterior (green distributions) has moved, relative to the prior (orange distributions). Usually it's also narrower.
+
+Interestingly, in at least one place my intuition in setting up the prior was quite wrong: `b_zi_max_vol_log_c`, which describes the effect that increasing volume has on the presence/absence of the average species. I thought that such a species should be found more frequently among larger plants, but apparently not! Quite the opposite, it gets _less_ likely to be present.
+
+Also worth noticing is the two posteriors for the interaction terms. This model was built in part to check for these values: to see if there is an interaction between environment and traits^[This is the sought-after "4th corner" or "trait-environment association" variable.].  However the model is pretty clear: the answer is no. Size of habitat and of body affect incidence independently.
+
+### Checking the quality of the result
+
+We can also create some of the plots that Garbry et al. suggest to us. These are useful for identifying where "divergent iterations" are found. Knowing this can help you decide if they are a minor problem or Quite a Very Large Problem:
+```{r}
+array_cardoso <- as.array(ZIP_cardoso)
+
+NUTS_cardoso <- bayesplot::nuts_params(ZIP_cardoso)
+bayesplot::mcmc_parcoord(array_cardoso, regex_pars = "b_.*", np = NUTS_cardoso)
+
+
+bayesplot::mcmc_pairs(array_cardoso, pars = c("b_intercept", "b_max_vol_log_c", "b_approx_biomass_mg_c", 
+"b_max_vol_log_c:approx_biomass_mg_c"), np = NUTS_cardoso)
+
+```
+
+Most useful of all are posterior predictive checks. Here I'm calculating the species richness predicted for each bromealiad -- that is, the number of species that are found there. The uncertainty in this result comes from uncertainty in both parts of the model: both the zero-producing part, and the count part (which can sometimes have 0s). Species richness is the opposite of this: it's the sum of all the times the model predicts a non-zero.
+
+```{r}
+
+# first make posterior predictions
+post_pred_ZIP_cardoso <- brms::posterior_predict(ZIP_cardoso)
+
+species_richness <- function(y) sum(y > 0)
+bayesplot::ppc_stat_grouped(y = cardoso_island$abundance, yrep = post_pred_ZIP_cardoso, group = cardoso_island$Bromeliad, stat = "species_richness")
+
+```
+
+And let me look at my own figure from above: the frequency of each species (that is, the number of plants in which it was observed) as a function of biomass. This is compelling because it wasn't directly modelled, and so it is one convenient way to check.
+
+```{r}
+cardoso_pp_sppfreq <- cardoso_island %>% 
+  add_predicted_samples(ZIP_cardoso, n = 500) %>% 
+  group_by(morphospecies, approx_biomass_mg_c, .iteration) %>%  
+  summarize(frequency = sum(pred > 0)) %>% 
+  mean_qi(.prob = c(.97)) %>% 
+  mutate(prob_fac = factor(.prob),
+         prob_fac = forcats::fct_reorder(prob_fac, .prob, .desc = TRUE)) %>% 
+  ungroup
+
+
+cardoso_island %>% 
+  group_by(morphospecies, approx_biomass_mg_c) %>% 
+  summarize(frequency = sum(abundance > 0),
+            n = n()) %>% 
+  ungroup %>% 
+  ggplot(aes(x = approx_biomass_mg_c, y = frequency)) + 
+  geom_linerange(aes(ymin = conf.low, ymax = conf.high, colour = prob_fac), size = 2, data = cardoso_pp_sppfreq) + 
+  scale_colour_brewer(type = "qual") +
+  geom_point() + 
+  # geom_hline(yintercept = c(0,25)) + 
+  stat_smooth(method = "lm") 
+
+```
+
+
 
 ## Questions for You, dear Reader
 

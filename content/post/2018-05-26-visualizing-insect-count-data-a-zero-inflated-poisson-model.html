@@ -16,6 +16,9 @@ bibliography: visual-bayes-refs.bib
 
 <p>Most ecologists would agree: it’s really hard to predict which animals are going to be where, and how many of them you might find when you look. Lately, there has been lots of interest in using mixed-effects models to make these predictions. The advantage is that these models are of a kind that most biologists already know about. The disadvantage is that they can be… a little <em>larger</em> than what we’re used to. They push at the boundaries both of what is currently employed in the literature, and what is described in most statistical textbooks.</p>
 <p>This blog post is my attempt to push those boundaries for my favourite system. I plan to both extend this model and/or to replicate it for many different datasets, so i want to make sure I get the foundation right. To that end, I’d love to hear any comments or feedback that you have, dear reader!</p>
+<blockquote>
+<p><strong>EDIT:</strong> in discussing this post with a friend, I spit out the following summary of what I’m trying to do. Let me know if this makes sense to you: <em>I use my domain knowledge as an ecologist to write out a linear model. Then I use my knowledge and the model to write the priors. Then I use the priors, the model and the data to calculate the posterior distribution.</em></p>
+</blockquote>
 <div id="the-data-im-using" class="section level3">
 <h3>The data I’m using</h3>
 <p>I’m going to work today with one of my favourite datasets, which was happily published on Zenodo a few years ago <span class="citation">(Srivastava and Romero 2016)</span>. It comes from work my doctoral supervisor, Dr Diane Srivastava, did on an island off the coast of São Paulo state, in Brazil, called Ilha do Cardoso. Here I’m going to access the data from the github repository, but if you’d like to use it please use the published version at Zenodo<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>.</p>
@@ -92,93 +95,93 @@ cardoso_island &lt;- abundance %&gt;%
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">Brom.79</td>
-<td align="right">1380</td>
-<td align="right">1.9404511</td>
+<td align="left">Brom.46</td>
+<td align="right">525</td>
+<td align="right">0.9740106</td>
+<td align="left">Tabanid spB (green, small-med)</td>
+<td align="right">26.6520</td>
+<td align="right">5.1511391</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">Brom.A</td>
+<td align="right">55</td>
+<td align="right">-1.2820545</td>
 <td align="left">Ephydridae sp. 1</td>
 <td align="right">0.0840</td>
 <td align="right">-0.6086635</td>
 <td align="right">0</td>
 </tr>
-<tr class="even">
-<td align="left">Brom.102</td>
-<td align="right">625</td>
-<td align="right">1.1483640</td>
-<td align="left">Phoniomyia spp. (lumped P. edwardsi, P. mulhensi, P. theobaldi, Culicidae sp. A + F)</td>
-<td align="right">0.0400</td>
-<td align="right">-1.3506009</td>
-<td align="right">0</td>
-</tr>
 <tr class="odd">
-<td align="left">Brom.7</td>
-<td align="right">90</td>
-<td align="right">-0.7895780</td>
-<td align="left">Empididae sp 2 (a few Muscidae sp mixed in)</td>
-<td align="right">0.0840</td>
-<td align="right">-0.6086635</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td align="left">Brom.7</td>
-<td align="right">90</td>
-<td align="right">-0.7895780</td>
-<td align="left">Tipulidae sp. (=Diptera sp L)</td>
-<td align="right">1.0100</td>
-<td align="right">1.8782253</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">Brom.77</td>
-<td align="right">270</td>
-<td align="right">0.3090343</td>
-<td align="left">Tubificidae sp.</td>
-<td align="right">0.0500</td>
-<td align="right">-1.1274573</td>
-<td align="right">1</td>
-</tr>
-<tr class="even">
-<td align="left">Brom.102</td>
-<td align="right">625</td>
-<td align="right">1.1483640</td>
-<td align="left">Tanytarsus sp.</td>
-<td align="right">0.0680</td>
-<td align="right">-0.8199726</td>
-<td align="right">7</td>
-</tr>
-<tr class="odd">
-<td align="left">Brom.79</td>
-<td align="right">1380</td>
-<td align="right">1.9404511</td>
-<td align="left">Leptagrion elongatum (C and D - the same species)</td>
-<td align="right">3.2949</td>
-<td align="right">3.0606508</td>
-<td align="right">4</td>
-</tr>
-<tr class="even">
-<td align="left">Brom.I</td>
-<td align="right">19</td>
-<td align="right">-2.3449487</td>
-<td align="left">Orthocladiinae sp.2 with some Orthocladiinae sp. 1 mixed in</td>
-<td align="right">0.0380</td>
-<td align="right">-1.4018942</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">Brom.46</td>
-<td align="right">525</td>
-<td align="right">0.9740106</td>
-<td align="left">Leptagrion macrurum and L. bocainense (mix, Zygoptera sp B, tan)</td>
-<td align="right">3.4435</td>
-<td align="right">3.1047633</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
 <td align="left">Brom.H</td>
 <td align="right">21</td>
 <td align="right">-2.2448653</td>
-<td align="left">Psychodid sp F+G (same species)</td>
-<td align="right">0.7890</td>
-<td align="right">1.6312860</td>
+<td align="left">Metriocnemus sp.</td>
+<td align="right">0.0680</td>
+<td align="right">-0.8199726</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">Brom.G</td>
+<td align="right">52</td>
+<td align="right">-1.3381440</td>
+<td align="left">?Dasyhelea sp.</td>
+<td align="right">0.1000</td>
+<td align="right">-0.4343101</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="left">Brom.B</td>
+<td align="right">41</td>
+<td align="right">-1.5758156</td>
+<td align="left">Bezzia sp. 1</td>
+<td align="right">0.1000</td>
+<td align="right">-0.4343101</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">Brom.4</td>
+<td align="right">810</td>
+<td align="right">1.4076466</td>
+<td align="left">Leech sp A (green dots)</td>
+<td align="right">0.5750</td>
+<td align="right">1.3148897</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">Brom.102</td>
+<td align="right">625</td>
+<td align="right">1.1483640</td>
+<td align="left">Polypedium sp.2</td>
+<td align="right">0.0540</td>
+<td align="right">-1.0504963</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">Brom.D</td>
+<td align="right">127</td>
+<td align="right">-0.4452006</td>
+<td align="left">Corethrellidae sp D</td>
+<td align="right">0.0600</td>
+<td align="right">-0.9451358</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">Brom.64</td>
+<td align="right">2840</td>
+<td align="right">2.6621716</td>
+<td align="left">Tabanid sp A</td>
+<td align="right">14.7355</td>
+<td align="right">4.5585345</td>
+<td align="right">3</td>
+</tr>
+<tr class="even">
+<td align="left">Brom.53</td>
+<td align="right">140</td>
+<td align="right">-0.3477453</td>
+<td align="left">Tabanidae sp. (=Diptera sp J)</td>
+<td align="right">9.7000</td>
+<td align="right">4.1404008</td>
 <td align="right">0</td>
 </tr>
 </tbody>
@@ -278,12 +281,13 @@ y_{ij} &amp;= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
 <ol style="list-style-type: decimal">
 <li>The abundance of an insect species in a plant is a zero-inflated poisson distribution</li>
 <li>the presence of an insect depends on the average probability of presence for the average insect in the average plant, plus changes for that insect’s body size, the plant’s size, and their interaction</li>
-<li>in <em>additon</em>, each bromeliad will differ slightly</li>
+<li>in <em>addition</em>, each bromeliad will differ slightly</li>
 <li>in addition, each species will also differ slightly. Species will also have variable relationships with habitat size, body size and their interaction.</li>
 <li>when present, the abundance of each species in each plant depends on all the same things</li>
 <li>presence/absence and abundance depend on the same things, but otherwise are totally independent.</li>
 </ol>
 <p>That last point is worth discussing. There are good reasons to relax it, and in fact that’s what I want to try to do. This post was born out of my desire to do so correctly.</p>
+<p><strong>EDIT</strong>: after writing this out, I realized that it doesn’t make a lot of sense to talk about varying slopes among species for the abundance ~ bodysize relationship. That’s because each species in this dataset has only one species-level trait for body mass. It might make more sense for a different system: say we were measuring wood density on individual trees, and were modelling instead of abundance something like their biomass or fecundity. In other words, it only makes sense to define variable slopes when there are within-group measurements of both things!<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a></p>
 </div>
 <div id="one-weird-trick-to-make-zero-inflated-models-even-better" class="section level4">
 <h4>One Weird Trick to make Zero Inflated Models Even Better</h4>
@@ -313,7 +317,7 @@ y_{ij} &amp;= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
 </div>
 <div id="the-joint-prior-distribution" class="section level3">
 <h3>the Joint Prior Distribution</h3>
-<p>Now we have a dataset and a model that we might fit to it. Before we fire up the sampling engine, is there a way to better understand this model? Maybe even get some sensible priors while we are at it? I was greatly inspired recently by reading Visualization in Bayesian Workflow by Gabry et al. <span class="citation">(2017)</span><a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a>. I’m going to follow their initial step here: selecting priors for my model, and simulating from them to see if I can get data that is “vaguely” like my observed data.</p>
+<p>Now we have a dataset and a model that we might fit to it. Before we fire up the sampling engine, is there a way to better understand this model? Maybe even get some sensible priors while we are at it? I was greatly inspired recently by reading Visualization in Bayesian Workflow by Gabry et al. <span class="citation">(2017)</span><a href="#fn4" class="footnoteRef" id="fnref4"><sup>4</sup></a>. I’m going to follow their initial step here: selecting priors for my model, and simulating from them to see if I can get data that is “vaguely” like my observed data.</p>
 <p>Just to illustrate that there’s been some learning here, i’d like to share a picture of the first simulations I made from this model, using priors that i <em>thought</em> were OK priors:</p>
 <div class="figure">
 <img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/impossible_points.png" />
@@ -353,12 +357,12 @@ y_{ij} &amp;= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
   # simulate from hyperpriors:
   
   # simulate the correlations
-  species_corrs &lt;- rethinking::rlkjcorr(1, 8)
+  species_corrs &lt;- rethinking::rlkjcorr(1, 6)
   bromeliad_corrs &lt;- rethinking::rlkjcorr(1, 2)
   
   # simulate the standard deviations
   
-  species_sd &lt;- rexp(8, 5)
+  species_sd &lt;- rexp(6, 5)
   bromeliad_sd &lt;- rexp(2, 4)
   
   # now matrix multiply to get covariance matrix
@@ -370,18 +374,18 @@ y_{ij} &amp;= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
   # they are going to modify the fixed effects in the model for each group
   # (right??)
   
-  species_values &lt;- MASS::mvrnorm(nspp, mu = rep(0, 8), Sigma = species_Sigma)
+  species_values &lt;- MASS::mvrnorm(nspp, mu = rep(0, 6), Sigma = species_Sigma)
   
   bromeliad_values &lt;- MASS::mvrnorm(nbrom, mu = rep(0, 2), Sigma = bromeliad_Sigma)
   
   # add names to the random effects
   ranef_names &lt;- c(
     &quot;spp_intercept&quot;,
-    &quot;spp_BS_mean_scale&quot;, 
+    # &quot;spp_BS_mean_scale&quot;, 
     &quot;spp_max_water_c&quot;,
     &quot;spp_max_water_c_by_BS_mean_scale&quot;,
     &quot;spp_zi_intercept&quot;,
-    &quot;spp_zi_BS_mean_scale&quot;, 
+    # &quot;spp_zi_BS_mean_scale&quot;, 
     &quot;spp_zi_max_water_c&quot;,
     &quot;spp_zi_max_water_c_by_BS_mean_scale&quot;
   )
@@ -425,17 +429,15 @@ y_{ij} &amp;= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
         b_zi_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c + 
         # groups
         spp_zi_intercept + 
-        spp_zi_BS_mean_scale * approx_biomass_mg_c + 
         spp_zi_max_water_c * max_vol_log_c + 
         spp_zi_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c,
       count = 
         b_intercept + 
         b_max_water_c * max_vol_log_c + 
-        b_BS_mean_scale * approx_biomass_mg_c + 
+        b_BS_mean_scale * approx_biomass_mg_c +
         b_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c + 
         # groups
         spp_intercept + 
-        spp_BS_mean_scale * approx_biomass_mg_c + 
         spp_max_water_c * max_vol_log_c + 
         spp_max_water_c_by_BS_mean_scale * max_vol_log_c * approx_biomass_mg_c,
     ) %&gt;%
@@ -469,11 +471,9 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <th align="right">b_zi_BS_mean_scale</th>
 <th align="right">b_zi_max_water_c_by_BS_mean_scale</th>
 <th align="right">spp_intercept</th>
-<th align="right">spp_BS_mean_scale</th>
 <th align="right">spp_max_water_c</th>
 <th align="right">spp_max_water_c_by_BS_mean_scale</th>
 <th align="right">spp_zi_intercept</th>
-<th align="right">spp_zi_BS_mean_scale</th>
 <th align="right">spp_zi_max_water_c</th>
 <th align="right">spp_zi_max_water_c_by_BS_mean_scale</th>
 <th align="right">brom_intercept</th>
@@ -492,59 +492,55 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <td align="left">Brom.1</td>
 <td align="right">-0.4343101</td>
 <td align="right">2.1836814</td>
-<td align="right">1.555019</td>
-<td align="right">0.7070779</td>
-<td align="right">-0.4575292</td>
-<td align="right">0.0638792</td>
-<td align="right">-1.098392</td>
-<td align="right">0.0515648</td>
-<td align="right">-0.1290552</td>
-<td align="right">-0.1867162</td>
-<td align="right">-0.2540406</td>
-<td align="right">-0.0182685</td>
-<td align="right">-0.0737418</td>
-<td align="right">-0.8691334</td>
-<td align="right">0.210334</td>
-<td align="right">0.0705942</td>
-<td align="right">0.0095421</td>
-<td align="right">0.591839</td>
-<td align="right">-0.1145901</td>
-<td align="right">-0.0699254</td>
-<td align="right">-1.1134463</td>
-<td align="right">3.654326</td>
-<td align="right">0.2472290</td>
-<td align="right">0</td>
-<td align="right">37</td>
-<td align="right">0</td>
+<td align="right">0.8532665</td>
+<td align="right">0.4681361</td>
+<td align="right">-0.362626</td>
+<td align="right">0.3819579</td>
+<td align="right">-0.8104822</td>
+<td align="right">0.3618643</td>
+<td align="right">-0.0992537</td>
+<td align="right">0.271204</td>
+<td align="right">-0.0488841</td>
+<td align="right">8.53e-05</td>
+<td align="right">0.2369279</td>
+<td align="right">-0.0191536</td>
+<td align="right">-0.2803311</td>
+<td align="right">0.0294855</td>
+<td align="right">-0.0136251</td>
+<td align="right">0.1598702</td>
+<td align="right">-0.8936587</td>
+<td align="right">1.397373</td>
+<td align="right">0.2903554</td>
+<td align="right">1</td>
+<td align="right">6</td>
+<td align="right">6</td>
 </tr>
 <tr class="even">
 <td align="left">?Dasyhelea sp.</td>
 <td align="left">Brom.102</td>
 <td align="right">-0.4343101</td>
 <td align="right">1.1483640</td>
-<td align="right">1.555019</td>
-<td align="right">0.7070779</td>
-<td align="right">-0.4575292</td>
-<td align="right">0.0638792</td>
-<td align="right">-1.098392</td>
-<td align="right">0.0515648</td>
-<td align="right">-0.1290552</td>
-<td align="right">-0.1867162</td>
-<td align="right">-0.2540406</td>
-<td align="right">-0.0182685</td>
-<td align="right">-0.0737418</td>
-<td align="right">-0.8691334</td>
-<td align="right">0.210334</td>
-<td align="right">0.0705942</td>
-<td align="right">0.0095421</td>
-<td align="right">0.591839</td>
-<td align="right">-0.1411520</td>
-<td align="right">-0.0885021</td>
-<td align="right">-0.9945482</td>
-<td align="right">2.636541</td>
-<td align="right">0.2700147</td>
+<td align="right">0.8532665</td>
+<td align="right">0.4681361</td>
+<td align="right">-0.362626</td>
+<td align="right">0.3819579</td>
+<td align="right">-0.8104822</td>
+<td align="right">0.3618643</td>
+<td align="right">-0.0992537</td>
+<td align="right">0.271204</td>
+<td align="right">-0.0488841</td>
+<td align="right">8.53e-05</td>
+<td align="right">0.2369279</td>
+<td align="right">-0.0191536</td>
+<td align="right">-0.2803311</td>
+<td align="right">0.0294855</td>
+<td align="right">0.0596455</td>
+<td align="right">0.0744599</td>
+<td align="right">-0.8428668</td>
+<td align="right">1.190896</td>
+<td align="right">0.3009313</td>
 <td align="right">0</td>
-<td align="right">13</td>
+<td align="right">5</td>
 <td align="right">0</td>
 </tr>
 <tr class="odd">
@@ -552,29 +548,27 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <td align="left">Brom.16</td>
 <td align="right">-0.4343101</td>
 <td align="right">1.8573845</td>
-<td align="right">1.555019</td>
-<td align="right">0.7070779</td>
-<td align="right">-0.4575292</td>
-<td align="right">0.0638792</td>
-<td align="right">-1.098392</td>
-<td align="right">0.0515648</td>
-<td align="right">-0.1290552</td>
-<td align="right">-0.1867162</td>
-<td align="right">-0.2540406</td>
-<td align="right">-0.0182685</td>
-<td align="right">-0.0737418</td>
-<td align="right">-0.8691334</td>
-<td align="right">0.210334</td>
-<td align="right">0.0705942</td>
-<td align="right">0.0095421</td>
-<td align="right">0.591839</td>
-<td align="right">-0.1547825</td>
-<td align="right">0.3583232</td>
-<td align="right">-1.0759737</td>
-<td align="right">3.333555</td>
-<td align="right">0.2542687</td>
+<td align="right">0.8532665</td>
+<td align="right">0.4681361</td>
+<td align="right">-0.362626</td>
+<td align="right">0.3819579</td>
+<td align="right">-0.8104822</td>
+<td align="right">0.3618643</td>
+<td align="right">-0.0992537</td>
+<td align="right">0.271204</td>
+<td align="right">-0.0488841</td>
+<td align="right">8.53e-05</td>
+<td align="right">0.2369279</td>
+<td align="right">-0.0191536</td>
+<td align="right">-0.2803311</td>
+<td align="right">0.0294855</td>
+<td align="right">-0.0107031</td>
+<td align="right">0.2636602</td>
+<td align="right">-0.8776508</td>
+<td align="right">1.332299</td>
+<td align="right">0.2936648</td>
 <td align="right">0</td>
-<td align="right">26</td>
+<td align="right">7</td>
 <td align="right">0</td>
 </tr>
 <tr class="even">
@@ -582,29 +576,27 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <td align="left">Brom.3</td>
 <td align="right">-0.4343101</td>
 <td align="right">0.5247428</td>
-<td align="right">1.555019</td>
-<td align="right">0.7070779</td>
-<td align="right">-0.4575292</td>
-<td align="right">0.0638792</td>
-<td align="right">-1.098392</td>
-<td align="right">0.0515648</td>
-<td align="right">-0.1290552</td>
-<td align="right">-0.1867162</td>
-<td align="right">-0.2540406</td>
-<td align="right">-0.0182685</td>
-<td align="right">-0.0737418</td>
-<td align="right">-0.8691334</td>
-<td align="right">0.210334</td>
-<td align="right">0.0705942</td>
-<td align="right">0.0095421</td>
-<td align="right">0.591839</td>
-<td align="right">0.0141440</td>
-<td align="right">0.0520142</td>
-<td align="right">-0.9229302</td>
-<td align="right">2.023480</td>
-<td align="right">0.2843612</td>
+<td align="right">0.8532665</td>
+<td align="right">0.4681361</td>
+<td align="right">-0.362626</td>
+<td align="right">0.3819579</td>
+<td align="right">-0.8104822</td>
+<td align="right">0.3618643</td>
+<td align="right">-0.0992537</td>
+<td align="right">0.271204</td>
+<td align="right">-0.0488841</td>
+<td align="right">8.53e-05</td>
+<td align="right">0.2369279</td>
+<td align="right">-0.0191536</td>
+<td align="right">-0.2803311</td>
+<td align="right">0.0294855</td>
+<td align="right">-0.0385172</td>
+<td align="right">-0.2406131</td>
+<td align="right">-0.8122724</td>
+<td align="right">1.066526</td>
+<td align="right">0.3074065</td>
+<td align="right">1</td>
 <td align="right">0</td>
-<td align="right">11</td>
 <td align="right">0</td>
 </tr>
 <tr class="odd">
@@ -612,67 +604,63 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <td align="left">Brom.4</td>
 <td align="right">-0.4343101</td>
 <td align="right">1.4076466</td>
-<td align="right">1.555019</td>
-<td align="right">0.7070779</td>
-<td align="right">-0.4575292</td>
-<td align="right">0.0638792</td>
-<td align="right">-1.098392</td>
-<td align="right">0.0515648</td>
-<td align="right">-0.1290552</td>
-<td align="right">-0.1867162</td>
-<td align="right">-0.2540406</td>
-<td align="right">-0.0182685</td>
-<td align="right">-0.0737418</td>
-<td align="right">-0.8691334</td>
-<td align="right">0.210334</td>
-<td align="right">0.0705942</td>
-<td align="right">0.0095421</td>
-<td align="right">0.591839</td>
-<td align="right">0.0703666</td>
-<td align="right">-0.0805581</td>
-<td align="right">-1.0243248</td>
-<td align="right">2.891433</td>
-<td align="right">0.2641858</td>
+<td align="right">0.8532665</td>
+<td align="right">0.4681361</td>
+<td align="right">-0.362626</td>
+<td align="right">0.3819579</td>
+<td align="right">-0.8104822</td>
+<td align="right">0.3618643</td>
+<td align="right">-0.0992537</td>
+<td align="right">0.271204</td>
+<td align="right">-0.0488841</td>
+<td align="right">8.53e-05</td>
+<td align="right">0.2369279</td>
+<td align="right">-0.0191536</td>
+<td align="right">-0.2803311</td>
+<td align="right">0.0294855</td>
+<td align="right">0.0747659</td>
+<td align="right">-0.0515756</td>
+<td align="right">-0.8555870</td>
+<td align="right">1.242606</td>
+<td align="right">0.2982622</td>
 <td align="right">1</td>
-<td align="right">17</td>
-<td align="right">17</td>
+<td align="right">5</td>
+<td align="right">5</td>
 </tr>
 <tr class="even">
 <td align="left">?Dasyhelea sp.</td>
 <td align="left">Brom.40</td>
 <td align="right">-0.4343101</td>
 <td align="right">1.5240569</td>
-<td align="right">1.555019</td>
-<td align="right">0.7070779</td>
-<td align="right">-0.4575292</td>
-<td align="right">0.0638792</td>
-<td align="right">-1.098392</td>
-<td align="right">0.0515648</td>
-<td align="right">-0.1290552</td>
-<td align="right">-0.1867162</td>
-<td align="right">-0.2540406</td>
-<td align="right">-0.0182685</td>
-<td align="right">-0.0737418</td>
-<td align="right">-0.8691334</td>
-<td align="right">0.210334</td>
-<td align="right">0.0705942</td>
-<td align="right">0.0095421</td>
-<td align="right">0.591839</td>
-<td align="right">0.1630523</td>
-<td align="right">-0.0773881</td>
-<td align="right">-1.0376936</td>
-<td align="right">3.005872</td>
-<td align="right">0.2615953</td>
-<td align="right">0</td>
-<td align="right">28</td>
-<td align="right">0</td>
+<td align="right">0.8532665</td>
+<td align="right">0.4681361</td>
+<td align="right">-0.362626</td>
+<td align="right">0.3819579</td>
+<td align="right">-0.8104822</td>
+<td align="right">0.3618643</td>
+<td align="right">-0.0992537</td>
+<td align="right">0.271204</td>
+<td align="right">-0.0488841</td>
+<td align="right">8.53e-05</td>
+<td align="right">0.2369279</td>
+<td align="right">-0.0191536</td>
+<td align="right">-0.2803311</td>
+<td align="right">0.0294855</td>
+<td align="right">0.0808177</td>
+<td align="right">-0.0321143</td>
+<td align="right">-0.8612980</td>
+<td align="right">1.265822</td>
+<td align="right">0.2970682</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">2</td>
 </tr>
 </tbody>
 </table>
 <p>We can also do this multiple times, and create the very “flipbook” to which Gabry et al. encourage us:</p>
-<pre class="r"><code>cardoso_simulations &lt;- purrr::rerun(simulate_one_cardoso(), .n = 10)</code></pre>
-<pre><code>## Warning in rpois(nrows_cardoso, lambda = exp(count)): NAs produced</code></pre>
-<pre class="r"><code>library(gganimate)
+<pre class="r"><code>cardoso_simulations &lt;- purrr::rerun(simulate_one_cardoso(), .n = 10)
+
+library(gganimate)
 flipbook &lt;- cardoso_simulations %&gt;% 
   map(~ .x %&gt;% select(max_vol_log_c, abundance, approx_biomass_mg_c)) %&gt;% 
   bind_rows(.id = &quot;sim&quot;) %&gt;% 
@@ -682,7 +670,6 @@ flipbook &lt;- cardoso_simulations %&gt;%
   coord_trans(y = scales::log1p_trans(), limy = c(0, 1e4)) + guides(fill = FALSE)
   
 gganimate(flipbook, interval = .2, filename = here::here(&quot;static&quot;, &quot;img&quot;, &quot;flipbook.gif&quot;))</code></pre>
-<pre><code>## Warning: Removed 1 rows containing missing values (geom_point).</code></pre>
 <pre><code>## Executing: 
 ## convert -loop 0 -delay 20 Rplot1.png Rplot2.png Rplot3.png
 ##     Rplot4.png Rplot5.png Rplot6.png Rplot7.png Rplot8.png
@@ -693,6 +680,27 @@ gganimate(flipbook, interval = .2, filename = here::here(&quot;static&quot;, &qu
 
 </div>
 <p>Uh, not bad, I guess! In general, but not always, the large things (on the right) are rarer. Mostly always, animals are more common when plants are larger. Abundances are pretty frequently insanely high, which is a good thing (5000 is already practically impossible). I’d stress again that at this point, the model does no more than catch basic information that any ecologist should be able to describe.</p>
+<p>We can also look at this a different way: again by looking at the prescences of different species:</p>
+<pre class="r"><code>frequency_simulation &lt;- cardoso_simulations %&gt;% 
+  map(~ .x %&gt;% select(max_vol_log_c, abundance, morphospecies, approx_biomass_mg_c)) %&gt;% 
+  bind_rows(.id = &quot;sim&quot;) %&gt;% 
+  group_by(sim, morphospecies, approx_biomass_mg_c) %&gt;% 
+  summarize(frequency = sum(abundance &gt; 0),
+            n = n()) %&gt;% 
+  ggplot(aes(x = approx_biomass_mg_c, y = frequency, frame = sim)) +
+  geom_point(aes(x = approx_biomass_mg_c, y = frequency),
+             data = cardoso_island %&gt;% 
+               group_by(morphospecies, approx_biomass_mg_c) %&gt;% 
+               summarize(frequency = sum(abundance &gt; 0),
+                         n = n()),
+             colour = &quot;lightgrey&quot;,
+             inherit.aes = FALSE) +
+  geom_point() +
+  geom_hline(yintercept = c(0,25)) + 
+  theme_bw()
+
+gganimate(frequency_simulation, .interval = 0.1)</code></pre>
+<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-1.png" width="672" /><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-2.png" width="672" /><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-3.png" width="672" /><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-4.png" width="672" /><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-5.png" width="672" /><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-6.png" width="672" /><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-7.png" width="672" /><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-8.png" width="672" /><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-9.png" width="672" /><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-7-10.png" width="672" /></p>
 <div id="lessons-ive-learned" class="section level4">
 <h4>Lessons I’ve learned</h4>
 <ul>
@@ -700,7 +708,531 @@ gganimate(flipbook, interval = .2, filename = here::here(&quot;static&quot;, &qu
 <li>it’s <em>even harder</em> when your variables are on different scales! in an earlier version of this attempt, I logged then centred bromeliad volume but did NOTHING to insect biomass – this made it almost impossible to set a reasonable prior on the interaction, since both had different magnitudes <strong>and</strong> different centres.</li>
 <li>back-of-the envelope (ie informal, approximate) calculations can be super helpful when reckoning out where to place a prior. For example, I reckoned that the average size insect should be pretty common – max about 200 per plant (so about 5.3 on a log scale) while the biggest insects should be rare (around 2 per plant, 0.6 on a log scale). So <code>(5.3 - 0.6) / (0 - 2.66)</code> is about <code>-1.4</code>, which gives us a decent guess for the coefficient on the effect of body size. Notice that this isn’t based totally on the data, but also on my own reckoning based on working with the system, independently of this dataset.</li>
 <li>Not only do I not understand log scales and logit scales, <em>I don’t understand multiplication</em>. I was still getting enormous values for predicted counts, and it was because the variance on my random effects was so high that the 2-way interaction of body size X volume was still creating large values. To correct this, I had to tune the rate parameters up very high on the random effects, essentially saying that species are not THAT different from each other.</li>
+<li>I set the same SD for all the random coefficients within one group at the same time – so, for example, all the 8 parameters for each species (four for abundance, four for presence/absence). I guess that what I could have done was to actually set a different SD for every random coefficient, rather that setting one random effect SD for all the effects in each group. That would have been much more laborious of course, but then again that’s the size the model actually is.</li>
 </ul>
+</div>
+</div>
+<div id="fitting-this-model" class="section level2">
+<h2>Fitting this model</h2>
+<p>How close are these priors to the posterior distribution? Does this model sample well, and does it make sensible predictions? The only way to find out is to fit it:</p>
+<pre class="r"><code>library(brms)
+names(cardoso_island)
+
+bf_zip_cardoso &lt;- bf(abundance ~ 0 + intercept +
+                            max_vol_log_c + 
+                            approx_biomass_mg_c +
+                            max_vol_log_c:approx_biomass_mg_c +
+                            (1 + max_vol_log_c + max_vol_log_c:approx_biomass_mg_c|s|morphospecies) +
+                            (1|b|Bromeliad),
+                          zi ~ 0 + intercept +
+                            max_vol_log_c + 
+                            approx_biomass_mg_c +
+                            max_vol_log_c:approx_biomass_mg_c +
+                            (1 + max_vol_log_c + max_vol_log_c:approx_biomass_mg_c|s|morphospecies) +
+                            (1|b|Bromeliad),
+                          family = &quot;zero_inflated_poisson&quot;)
+
+get_prior(bf_zip_cardoso, data = cardoso_island)
+
+ZIP_prior_cardoso &lt;- c(
+  set_prior(&quot;normal(1, 0.2)&quot;, class = &quot;b&quot;,   coef = &quot;intercept&quot;),
+  set_prior(&quot;normal(0.8, 0.2)&quot;, class = &quot;b&quot;,   coef = &quot;max_vol_log_c&quot;),
+  set_prior(&quot;normal(-0.4, 0.2)&quot;, class = &quot;b&quot;,   coef = &quot;approx_biomass_mg_c&quot;),
+  set_prior(&quot;normal(0, 0.2)&quot;, class = &quot;b&quot;,   coef = &quot;max_vol_log_c:approx_biomass_mg_c&quot;),
+  # zi part
+  set_prior(&quot;normal(-1, 0.2)&quot;, class = &quot;b&quot;, dpar = &quot;zi&quot;,  coef = &quot;intercept&quot;),
+  set_prior(&quot;normal(0.3, 0.3)&quot;, class = &quot;b&quot;, dpar = &quot;zi&quot;,  coef = &quot;max_vol_log_c&quot;),
+  set_prior(&quot;normal(-0.2, 0.2)&quot;, class = &quot;b&quot;, dpar = &quot;zi&quot;,  coef = &quot;approx_biomass_mg_c&quot;),
+  set_prior(&quot;normal(0, 0.2)&quot;, class = &quot;b&quot;, dpar = &quot;zi&quot;,  coef = &quot;max_vol_log_c:approx_biomass_mg_c&quot;),
+  set_prior(&quot;lkj(4)&quot;,       class = &quot;cor&quot;),
+  set_prior(&quot;exponential(5)&quot;, group = &quot;morphospecies&quot;, class = &quot;sd&quot;),
+  set_prior(&quot;exponential(4)&quot;, group = &quot;Bromeliad&quot;, class = &quot;sd&quot;)
+)
+
+ZIP_cardoso&lt;- brm(bf_zip_cardoso,
+                  data = cardoso_island,
+                  cores = 3, chains = 3,
+                  iter = 5000,
+                  sample_prior = TRUE,
+                  prior = ZIP_prior_cardoso,
+                  # could try to manipulate these back down if it works OK
+                  control = list(#max_treedepth = 15,
+                    adapt_delta = 0.95))
+
+readr::write_rds(ZIP_cardoso, here::here(&quot;content&quot;, &quot;post&quot; , &quot;ZIP_cardoso.rds&quot;))</code></pre>
+<pre class="r"><code>ZIP_cardoso &lt;- readr::read_rds(here::here(&quot;content&quot;, &quot;post&quot;, &quot;ZIP_cardoso.rds&quot;))</code></pre>
+<pre class="r"><code>library(tidybayes)
+library(ggridges)
+
+parameters(ZIP_cardoso)</code></pre>
+<pre><code>##   [1] &quot;b_intercept&quot;                                                                                                                                       
+##   [2] &quot;b_max_vol_log_c&quot;                                                                                                                                   
+##   [3] &quot;b_approx_biomass_mg_c&quot;                                                                                                                             
+##   [4] &quot;b_max_vol_log_c:approx_biomass_mg_c&quot;                                                                                                               
+##   [5] &quot;b_zi_intercept&quot;                                                                                                                                    
+##   [6] &quot;b_zi_max_vol_log_c&quot;                                                                                                                                
+##   [7] &quot;b_zi_approx_biomass_mg_c&quot;                                                                                                                          
+##   [8] &quot;b_zi_max_vol_log_c:approx_biomass_mg_c&quot;                                                                                                            
+##   [9] &quot;sd_Bromeliad__Intercept&quot;                                                                                                                           
+##  [10] &quot;sd_Bromeliad__zi_Intercept&quot;                                                                                                                        
+##  [11] &quot;sd_morphospecies__Intercept&quot;                                                                                                                       
+##  [12] &quot;sd_morphospecies__max_vol_log_c&quot;                                                                                                                   
+##  [13] &quot;sd_morphospecies__max_vol_log_c:approx_biomass_mg_c&quot;                                                                                               
+##  [14] &quot;sd_morphospecies__zi_Intercept&quot;                                                                                                                    
+##  [15] &quot;sd_morphospecies__zi_max_vol_log_c&quot;                                                                                                                
+##  [16] &quot;sd_morphospecies__zi_max_vol_log_c:approx_biomass_mg_c&quot;                                                                                            
+##  [17] &quot;cor_Bromeliad__Intercept__zi_Intercept&quot;                                                                                                            
+##  [18] &quot;cor_morphospecies__Intercept__max_vol_log_c&quot;                                                                                                       
+##  [19] &quot;cor_morphospecies__Intercept__max_vol_log_c:approx_biomass_mg_c&quot;                                                                                   
+##  [20] &quot;cor_morphospecies__max_vol_log_c__max_vol_log_c:approx_biomass_mg_c&quot;                                                                               
+##  [21] &quot;cor_morphospecies__Intercept__zi_Intercept&quot;                                                                                                        
+##  [22] &quot;cor_morphospecies__max_vol_log_c__zi_Intercept&quot;                                                                                                    
+##  [23] &quot;cor_morphospecies__max_vol_log_c:approx_biomass_mg_c__zi_Intercept&quot;                                                                                
+##  [24] &quot;cor_morphospecies__Intercept__zi_max_vol_log_c&quot;                                                                                                    
+##  [25] &quot;cor_morphospecies__max_vol_log_c__zi_max_vol_log_c&quot;                                                                                                
+##  [26] &quot;cor_morphospecies__max_vol_log_c:approx_biomass_mg_c__zi_max_vol_log_c&quot;                                                                            
+##  [27] &quot;cor_morphospecies__zi_Intercept__zi_max_vol_log_c&quot;                                                                                                 
+##  [28] &quot;cor_morphospecies__Intercept__zi_max_vol_log_c:approx_biomass_mg_c&quot;                                                                                
+##  [29] &quot;cor_morphospecies__max_vol_log_c__zi_max_vol_log_c:approx_biomass_mg_c&quot;                                                                            
+##  [30] &quot;cor_morphospecies__max_vol_log_c:approx_biomass_mg_c__zi_max_vol_log_c:approx_biomass_mg_c&quot;                                                        
+##  [31] &quot;cor_morphospecies__zi_Intercept__zi_max_vol_log_c:approx_biomass_mg_c&quot;                                                                             
+##  [32] &quot;cor_morphospecies__zi_max_vol_log_c__zi_max_vol_log_c:approx_biomass_mg_c&quot;                                                                         
+##  [33] &quot;r_Bromeliad[Brom.1,Intercept]&quot;                                                                                                                     
+##  [34] &quot;r_Bromeliad[Brom.102,Intercept]&quot;                                                                                                                   
+##  [35] &quot;r_Bromeliad[Brom.16,Intercept]&quot;                                                                                                                    
+##  [36] &quot;r_Bromeliad[Brom.3,Intercept]&quot;                                                                                                                     
+##  [37] &quot;r_Bromeliad[Brom.4,Intercept]&quot;                                                                                                                     
+##  [38] &quot;r_Bromeliad[Brom.40,Intercept]&quot;                                                                                                                    
+##  [39] &quot;r_Bromeliad[Brom.46,Intercept]&quot;                                                                                                                    
+##  [40] &quot;r_Bromeliad[Brom.48,Intercept]&quot;                                                                                                                    
+##  [41] &quot;r_Bromeliad[Brom.53,Intercept]&quot;                                                                                                                    
+##  [42] &quot;r_Bromeliad[Brom.64,Intercept]&quot;                                                                                                                    
+##  [43] &quot;r_Bromeliad[Brom.7,Intercept]&quot;                                                                                                                     
+##  [44] &quot;r_Bromeliad[Brom.77,Intercept]&quot;                                                                                                                    
+##  [45] &quot;r_Bromeliad[Brom.79,Intercept]&quot;                                                                                                                    
+##  [46] &quot;r_Bromeliad[Brom.82,Intercept]&quot;                                                                                                                    
+##  [47] &quot;r_Bromeliad[Brom.85,Intercept]&quot;                                                                                                                    
+##  [48] &quot;r_Bromeliad[Brom.95,Intercept]&quot;                                                                                                                    
+##  [49] &quot;r_Bromeliad[Brom.A,Intercept]&quot;                                                                                                                     
+##  [50] &quot;r_Bromeliad[Brom.B,Intercept]&quot;                                                                                                                     
+##  [51] &quot;r_Bromeliad[Brom.C,Intercept]&quot;                                                                                                                     
+##  [52] &quot;r_Bromeliad[Brom.D,Intercept]&quot;                                                                                                                     
+##  [53] &quot;r_Bromeliad[Brom.E,Intercept]&quot;                                                                                                                     
+##  [54] &quot;r_Bromeliad[Brom.F,Intercept]&quot;                                                                                                                     
+##  [55] &quot;r_Bromeliad[Brom.G,Intercept]&quot;                                                                                                                     
+##  [56] &quot;r_Bromeliad[Brom.H,Intercept]&quot;                                                                                                                     
+##  [57] &quot;r_Bromeliad[Brom.I,Intercept]&quot;                                                                                                                     
+##  [58] &quot;r_Bromeliad__zi[Brom.1,Intercept]&quot;                                                                                                                 
+##  [59] &quot;r_Bromeliad__zi[Brom.102,Intercept]&quot;                                                                                                               
+##  [60] &quot;r_Bromeliad__zi[Brom.16,Intercept]&quot;                                                                                                                
+##  [61] &quot;r_Bromeliad__zi[Brom.3,Intercept]&quot;                                                                                                                 
+##  [62] &quot;r_Bromeliad__zi[Brom.4,Intercept]&quot;                                                                                                                 
+##  [63] &quot;r_Bromeliad__zi[Brom.40,Intercept]&quot;                                                                                                                
+##  [64] &quot;r_Bromeliad__zi[Brom.46,Intercept]&quot;                                                                                                                
+##  [65] &quot;r_Bromeliad__zi[Brom.48,Intercept]&quot;                                                                                                                
+##  [66] &quot;r_Bromeliad__zi[Brom.53,Intercept]&quot;                                                                                                                
+##  [67] &quot;r_Bromeliad__zi[Brom.64,Intercept]&quot;                                                                                                                
+##  [68] &quot;r_Bromeliad__zi[Brom.7,Intercept]&quot;                                                                                                                 
+##  [69] &quot;r_Bromeliad__zi[Brom.77,Intercept]&quot;                                                                                                                
+##  [70] &quot;r_Bromeliad__zi[Brom.79,Intercept]&quot;                                                                                                                
+##  [71] &quot;r_Bromeliad__zi[Brom.82,Intercept]&quot;                                                                                                                
+##  [72] &quot;r_Bromeliad__zi[Brom.85,Intercept]&quot;                                                                                                                
+##  [73] &quot;r_Bromeliad__zi[Brom.95,Intercept]&quot;                                                                                                                
+##  [74] &quot;r_Bromeliad__zi[Brom.A,Intercept]&quot;                                                                                                                 
+##  [75] &quot;r_Bromeliad__zi[Brom.B,Intercept]&quot;                                                                                                                 
+##  [76] &quot;r_Bromeliad__zi[Brom.C,Intercept]&quot;                                                                                                                 
+##  [77] &quot;r_Bromeliad__zi[Brom.D,Intercept]&quot;                                                                                                                 
+##  [78] &quot;r_Bromeliad__zi[Brom.E,Intercept]&quot;                                                                                                                 
+##  [79] &quot;r_Bromeliad__zi[Brom.F,Intercept]&quot;                                                                                                                 
+##  [80] &quot;r_Bromeliad__zi[Brom.G,Intercept]&quot;                                                                                                                 
+##  [81] &quot;r_Bromeliad__zi[Brom.H,Intercept]&quot;                                                                                                                 
+##  [82] &quot;r_Bromeliad__zi[Brom.I,Intercept]&quot;                                                                                                                 
+##  [83] &quot;r_morphospecies[?Dasyhelea.sp.,Intercept]&quot;                                                                                                         
+##  [84] &quot;r_morphospecies[?Drosophilidae.sp..A,Intercept]&quot;                                                                                                   
+##  [85] &quot;r_morphospecies[?Pseudochironomus,Intercept]&quot;                                                                                                      
+##  [86] &quot;r_morphospecies[Aedes.albopictus,Intercept]&quot;                                                                                                       
+##  [87] &quot;r_morphospecies[aff..Copestilum.sp.,Intercept]&quot;                                                                                                    
+##  [88] &quot;r_morphospecies[Anopheles.bellator,Intercept]&quot;                                                                                                     
+##  [89] &quot;r_morphospecies[Bezzia.sp..1,Intercept]&quot;                                                                                                           
+##  [90] &quot;r_morphospecies[Bezzia.sp..2,Intercept]&quot;                                                                                                           
+##  [91] &quot;r_morphospecies[Callistocypris.mckenziei,Intercept]&quot;                                                                                               
+##  [92] &quot;r_morphospecies[Cecidomyiadae.sp.1.(a.few.Empididae.sp.3.mixed.in),Intercept]&quot;                                                                     
+##  [93] &quot;r_morphospecies[Chironomus.aff..detriticula,Intercept]&quot;                                                                                            
+##  [94] &quot;r_morphospecies[Corethrellidae.sp.A.(needs.taxonomist,.may.be.same.as.B/C/D),Intercept]&quot;                                                           
+##  [95] &quot;r_morphospecies[Corethrellidae.sp.B,Intercept]&quot;                                                                                                    
+##  [96] &quot;r_morphospecies[Corethrellidae.sp.C,Intercept]&quot;                                                                                                    
+##  [97] &quot;r_morphospecies[Corethrellidae.sp.D,Intercept]&quot;                                                                                                    
+##  [98] &quot;r_morphospecies[Culex.(Microculex).spp.,Intercept]&quot;                                                                                                
+##  [99] &quot;r_morphospecies[Dolichopodidae.sp.,Intercept]&quot;                                                                                                     
+## [100] &quot;r_morphospecies[Dolichopodidae.spA,Intercept]&quot;                                                                                                     
+## [101] &quot;r_morphospecies[Empididae.sp.2.(a.few.Muscidae.sp.mixed.in),Intercept]&quot;                                                                            
+## [102] &quot;r_morphospecies[Empididae.sp..1,Intercept]&quot;                                                                                                        
+## [103] &quot;r_morphospecies[Ephydridae.sp..1,Intercept]&quot;                                                                                                       
+## [104] &quot;r_morphospecies[Ephydridae.sp..2,Intercept]&quot;                                                                                                       
+## [105] &quot;r_morphospecies[Leech.sp.A.(green.dots),Intercept]&quot;                                                                                                
+## [106] &quot;r_morphospecies[Leech.sp.B.(black),Intercept]&quot;                                                                                                     
+## [107] &quot;r_morphospecies[Leptagrion.andromache,Intercept]&quot;                                                                                                  
+## [108] &quot;r_morphospecies[Leptagrion.elongatum.(C.and.D.-.the.same.species),Intercept]&quot;                                                                      
+## [109] &quot;r_morphospecies[Leptagrion.macrurum.and.L..bocainense.(mix,.Zygoptera.sp.B,.tan),Intercept]&quot;                                                       
+## [110] &quot;r_morphospecies[Metriocnemus.sp.,Intercept]&quot;                                                                                                       
+## [111] &quot;r_morphospecies[Monopelopia.aff.caraguata,Intercept]&quot;                                                                                              
+## [112] &quot;r_morphospecies[Muscomorpha.sp..1,Intercept]&quot;                                                                                                      
+## [113] &quot;r_morphospecies[Olbiogaster.sp.,Intercept]&quot;                                                                                                        
+## [114] &quot;r_morphospecies[Orthocladiinae.sp.2.with.some.Orthocladiinae.sp..1.mixed.in,Intercept]&quot;                                                            
+## [115] &quot;r_morphospecies[Phoniomyia.spp..(lumped.P..edwardsi,.P..mulhensi,.P..theobaldi,.Culicidae.sp..A.+.F),Intercept]&quot;                                   
+## [116] &quot;r_morphospecies[Phylloicus.bromeliarum,Intercept]&quot;                                                                                                 
+## [117] &quot;r_morphospecies[Polypedium.sp.1,Intercept]&quot;                                                                                                        
+## [118] &quot;r_morphospecies[Polypedium.sp.2,Intercept]&quot;                                                                                                        
+## [119] &quot;r_morphospecies[Psychodid.sp.A.(pigpen),Intercept]&quot;                                                                                                
+## [120] &quot;r_morphospecies[Psychodid.sp.B+C.(same.species),Intercept]&quot;                                                                                        
+## [121] &quot;r_morphospecies[Psychodid.sp.D,Intercept]&quot;                                                                                                         
+## [122] &quot;r_morphospecies[Psychodid.sp.E,Intercept]&quot;                                                                                                         
+## [123] &quot;r_morphospecies[Psychodid.sp.F+G.(same.species),Intercept]&quot;                                                                                        
+## [124] &quot;r_morphospecies[Sciaridae.sp.,Intercept]&quot;                                                                                                          
+## [125] &quot;r_morphospecies[Scyrtes.sp..1,Intercept]&quot;                                                                                                          
+## [126] &quot;r_morphospecies[Scyrtes.sp..2,Intercept]&quot;                                                                                                          
+## [127] &quot;r_morphospecies[Stenochironomus.subgenus.petalopholeus.(leaf.miner,.green.leaves.or.those.that.just.fallen),Intercept]&quot;                            
+## [128] &quot;r_morphospecies[Tabanid.sp.A,Intercept]&quot;                                                                                                           
+## [129] &quot;r_morphospecies[Tabanid.spB.(green,.small-med),Intercept]&quot;                                                                                         
+## [130] &quot;r_morphospecies[Tabanidae.sp..(=Diptera.sp.J),Intercept]&quot;                                                                                          
+## [131] &quot;r_morphospecies[Tanytarsus.sp.,Intercept]&quot;                                                                                                         
+## [132] &quot;r_morphospecies[Tipulidae.sp..(=Diptera.sp.L),Intercept]&quot;                                                                                          
+## [133] &quot;r_morphospecies[Trentepohlia.sp.,Intercept]&quot;                                                                                                       
+## [134] &quot;r_morphospecies[Tubificidae.sp.,Intercept]&quot;                                                                                                        
+## [135] &quot;r_morphospecies[Wyeomyia.spp.,Intercept]&quot;                                                                                                          
+## [136] &quot;r_morphospecies[?Dasyhelea.sp.,max_vol_log_c]&quot;                                                                                                     
+## [137] &quot;r_morphospecies[?Drosophilidae.sp..A,max_vol_log_c]&quot;                                                                                               
+## [138] &quot;r_morphospecies[?Pseudochironomus,max_vol_log_c]&quot;                                                                                                  
+## [139] &quot;r_morphospecies[Aedes.albopictus,max_vol_log_c]&quot;                                                                                                   
+## [140] &quot;r_morphospecies[aff..Copestilum.sp.,max_vol_log_c]&quot;                                                                                                
+## [141] &quot;r_morphospecies[Anopheles.bellator,max_vol_log_c]&quot;                                                                                                 
+## [142] &quot;r_morphospecies[Bezzia.sp..1,max_vol_log_c]&quot;                                                                                                       
+## [143] &quot;r_morphospecies[Bezzia.sp..2,max_vol_log_c]&quot;                                                                                                       
+## [144] &quot;r_morphospecies[Callistocypris.mckenziei,max_vol_log_c]&quot;                                                                                           
+## [145] &quot;r_morphospecies[Cecidomyiadae.sp.1.(a.few.Empididae.sp.3.mixed.in),max_vol_log_c]&quot;                                                                 
+## [146] &quot;r_morphospecies[Chironomus.aff..detriticula,max_vol_log_c]&quot;                                                                                        
+## [147] &quot;r_morphospecies[Corethrellidae.sp.A.(needs.taxonomist,.may.be.same.as.B/C/D),max_vol_log_c]&quot;                                                       
+## [148] &quot;r_morphospecies[Corethrellidae.sp.B,max_vol_log_c]&quot;                                                                                                
+## [149] &quot;r_morphospecies[Corethrellidae.sp.C,max_vol_log_c]&quot;                                                                                                
+## [150] &quot;r_morphospecies[Corethrellidae.sp.D,max_vol_log_c]&quot;                                                                                                
+## [151] &quot;r_morphospecies[Culex.(Microculex).spp.,max_vol_log_c]&quot;                                                                                            
+## [152] &quot;r_morphospecies[Dolichopodidae.sp.,max_vol_log_c]&quot;                                                                                                 
+## [153] &quot;r_morphospecies[Dolichopodidae.spA,max_vol_log_c]&quot;                                                                                                 
+## [154] &quot;r_morphospecies[Empididae.sp.2.(a.few.Muscidae.sp.mixed.in),max_vol_log_c]&quot;                                                                        
+## [155] &quot;r_morphospecies[Empididae.sp..1,max_vol_log_c]&quot;                                                                                                    
+## [156] &quot;r_morphospecies[Ephydridae.sp..1,max_vol_log_c]&quot;                                                                                                   
+## [157] &quot;r_morphospecies[Ephydridae.sp..2,max_vol_log_c]&quot;                                                                                                   
+## [158] &quot;r_morphospecies[Leech.sp.A.(green.dots),max_vol_log_c]&quot;                                                                                            
+## [159] &quot;r_morphospecies[Leech.sp.B.(black),max_vol_log_c]&quot;                                                                                                 
+## [160] &quot;r_morphospecies[Leptagrion.andromache,max_vol_log_c]&quot;                                                                                              
+## [161] &quot;r_morphospecies[Leptagrion.elongatum.(C.and.D.-.the.same.species),max_vol_log_c]&quot;                                                                  
+## [162] &quot;r_morphospecies[Leptagrion.macrurum.and.L..bocainense.(mix,.Zygoptera.sp.B,.tan),max_vol_log_c]&quot;                                                   
+## [163] &quot;r_morphospecies[Metriocnemus.sp.,max_vol_log_c]&quot;                                                                                                   
+## [164] &quot;r_morphospecies[Monopelopia.aff.caraguata,max_vol_log_c]&quot;                                                                                          
+## [165] &quot;r_morphospecies[Muscomorpha.sp..1,max_vol_log_c]&quot;                                                                                                  
+## [166] &quot;r_morphospecies[Olbiogaster.sp.,max_vol_log_c]&quot;                                                                                                    
+## [167] &quot;r_morphospecies[Orthocladiinae.sp.2.with.some.Orthocladiinae.sp..1.mixed.in,max_vol_log_c]&quot;                                                        
+## [168] &quot;r_morphospecies[Phoniomyia.spp..(lumped.P..edwardsi,.P..mulhensi,.P..theobaldi,.Culicidae.sp..A.+.F),max_vol_log_c]&quot;                               
+## [169] &quot;r_morphospecies[Phylloicus.bromeliarum,max_vol_log_c]&quot;                                                                                             
+## [170] &quot;r_morphospecies[Polypedium.sp.1,max_vol_log_c]&quot;                                                                                                    
+## [171] &quot;r_morphospecies[Polypedium.sp.2,max_vol_log_c]&quot;                                                                                                    
+## [172] &quot;r_morphospecies[Psychodid.sp.A.(pigpen),max_vol_log_c]&quot;                                                                                            
+## [173] &quot;r_morphospecies[Psychodid.sp.B+C.(same.species),max_vol_log_c]&quot;                                                                                    
+## [174] &quot;r_morphospecies[Psychodid.sp.D,max_vol_log_c]&quot;                                                                                                     
+## [175] &quot;r_morphospecies[Psychodid.sp.E,max_vol_log_c]&quot;                                                                                                     
+## [176] &quot;r_morphospecies[Psychodid.sp.F+G.(same.species),max_vol_log_c]&quot;                                                                                    
+## [177] &quot;r_morphospecies[Sciaridae.sp.,max_vol_log_c]&quot;                                                                                                      
+## [178] &quot;r_morphospecies[Scyrtes.sp..1,max_vol_log_c]&quot;                                                                                                      
+## [179] &quot;r_morphospecies[Scyrtes.sp..2,max_vol_log_c]&quot;                                                                                                      
+## [180] &quot;r_morphospecies[Stenochironomus.subgenus.petalopholeus.(leaf.miner,.green.leaves.or.those.that.just.fallen),max_vol_log_c]&quot;                        
+## [181] &quot;r_morphospecies[Tabanid.sp.A,max_vol_log_c]&quot;                                                                                                       
+## [182] &quot;r_morphospecies[Tabanid.spB.(green,.small-med),max_vol_log_c]&quot;                                                                                     
+## [183] &quot;r_morphospecies[Tabanidae.sp..(=Diptera.sp.J),max_vol_log_c]&quot;                                                                                      
+## [184] &quot;r_morphospecies[Tanytarsus.sp.,max_vol_log_c]&quot;                                                                                                     
+## [185] &quot;r_morphospecies[Tipulidae.sp..(=Diptera.sp.L),max_vol_log_c]&quot;                                                                                      
+## [186] &quot;r_morphospecies[Trentepohlia.sp.,max_vol_log_c]&quot;                                                                                                   
+## [187] &quot;r_morphospecies[Tubificidae.sp.,max_vol_log_c]&quot;                                                                                                    
+## [188] &quot;r_morphospecies[Wyeomyia.spp.,max_vol_log_c]&quot;                                                                                                      
+## [189] &quot;r_morphospecies[?Dasyhelea.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                 
+## [190] &quot;r_morphospecies[?Drosophilidae.sp..A,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                           
+## [191] &quot;r_morphospecies[?Pseudochironomus,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                              
+## [192] &quot;r_morphospecies[Aedes.albopictus,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                               
+## [193] &quot;r_morphospecies[aff..Copestilum.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                            
+## [194] &quot;r_morphospecies[Anopheles.bellator,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                             
+## [195] &quot;r_morphospecies[Bezzia.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                   
+## [196] &quot;r_morphospecies[Bezzia.sp..2,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                   
+## [197] &quot;r_morphospecies[Callistocypris.mckenziei,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                       
+## [198] &quot;r_morphospecies[Cecidomyiadae.sp.1.(a.few.Empididae.sp.3.mixed.in),max_vol_log_c:approx_biomass_mg_c]&quot;                                             
+## [199] &quot;r_morphospecies[Chironomus.aff..detriticula,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                    
+## [200] &quot;r_morphospecies[Corethrellidae.sp.A.(needs.taxonomist,.may.be.same.as.B/C/D),max_vol_log_c:approx_biomass_mg_c]&quot;                                   
+## [201] &quot;r_morphospecies[Corethrellidae.sp.B,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                            
+## [202] &quot;r_morphospecies[Corethrellidae.sp.C,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                            
+## [203] &quot;r_morphospecies[Corethrellidae.sp.D,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                            
+## [204] &quot;r_morphospecies[Culex.(Microculex).spp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                        
+## [205] &quot;r_morphospecies[Dolichopodidae.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                             
+## [206] &quot;r_morphospecies[Dolichopodidae.spA,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                             
+## [207] &quot;r_morphospecies[Empididae.sp.2.(a.few.Muscidae.sp.mixed.in),max_vol_log_c:approx_biomass_mg_c]&quot;                                                    
+## [208] &quot;r_morphospecies[Empididae.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                
+## [209] &quot;r_morphospecies[Ephydridae.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                               
+## [210] &quot;r_morphospecies[Ephydridae.sp..2,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                               
+## [211] &quot;r_morphospecies[Leech.sp.A.(green.dots),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                        
+## [212] &quot;r_morphospecies[Leech.sp.B.(black),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                             
+## [213] &quot;r_morphospecies[Leptagrion.andromache,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                          
+## [214] &quot;r_morphospecies[Leptagrion.elongatum.(C.and.D.-.the.same.species),max_vol_log_c:approx_biomass_mg_c]&quot;                                              
+## [215] &quot;r_morphospecies[Leptagrion.macrurum.and.L..bocainense.(mix,.Zygoptera.sp.B,.tan),max_vol_log_c:approx_biomass_mg_c]&quot;                               
+## [216] &quot;r_morphospecies[Metriocnemus.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                               
+## [217] &quot;r_morphospecies[Monopelopia.aff.caraguata,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                      
+## [218] &quot;r_morphospecies[Muscomorpha.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                              
+## [219] &quot;r_morphospecies[Olbiogaster.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                
+## [220] &quot;r_morphospecies[Orthocladiinae.sp.2.with.some.Orthocladiinae.sp..1.mixed.in,max_vol_log_c:approx_biomass_mg_c]&quot;                                    
+## [221] &quot;r_morphospecies[Phoniomyia.spp..(lumped.P..edwardsi,.P..mulhensi,.P..theobaldi,.Culicidae.sp..A.+.F),max_vol_log_c:approx_biomass_mg_c]&quot;           
+## [222] &quot;r_morphospecies[Phylloicus.bromeliarum,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                         
+## [223] &quot;r_morphospecies[Polypedium.sp.1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                
+## [224] &quot;r_morphospecies[Polypedium.sp.2,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                
+## [225] &quot;r_morphospecies[Psychodid.sp.A.(pigpen),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                        
+## [226] &quot;r_morphospecies[Psychodid.sp.B+C.(same.species),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                
+## [227] &quot;r_morphospecies[Psychodid.sp.D,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                 
+## [228] &quot;r_morphospecies[Psychodid.sp.E,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                 
+## [229] &quot;r_morphospecies[Psychodid.sp.F+G.(same.species),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                
+## [230] &quot;r_morphospecies[Sciaridae.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                  
+## [231] &quot;r_morphospecies[Scyrtes.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                  
+## [232] &quot;r_morphospecies[Scyrtes.sp..2,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                  
+## [233] &quot;r_morphospecies[Stenochironomus.subgenus.petalopholeus.(leaf.miner,.green.leaves.or.those.that.just.fallen),max_vol_log_c:approx_biomass_mg_c]&quot;    
+## [234] &quot;r_morphospecies[Tabanid.sp.A,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                   
+## [235] &quot;r_morphospecies[Tabanid.spB.(green,.small-med),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                 
+## [236] &quot;r_morphospecies[Tabanidae.sp..(=Diptera.sp.J),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                  
+## [237] &quot;r_morphospecies[Tanytarsus.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                 
+## [238] &quot;r_morphospecies[Tipulidae.sp..(=Diptera.sp.L),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                  
+## [239] &quot;r_morphospecies[Trentepohlia.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                               
+## [240] &quot;r_morphospecies[Tubificidae.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                
+## [241] &quot;r_morphospecies[Wyeomyia.spp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                                  
+## [242] &quot;r_morphospecies__zi[?Dasyhelea.sp.,Intercept]&quot;                                                                                                     
+## [243] &quot;r_morphospecies__zi[?Drosophilidae.sp..A,Intercept]&quot;                                                                                               
+## [244] &quot;r_morphospecies__zi[?Pseudochironomus,Intercept]&quot;                                                                                                  
+## [245] &quot;r_morphospecies__zi[Aedes.albopictus,Intercept]&quot;                                                                                                   
+## [246] &quot;r_morphospecies__zi[aff..Copestilum.sp.,Intercept]&quot;                                                                                                
+## [247] &quot;r_morphospecies__zi[Anopheles.bellator,Intercept]&quot;                                                                                                 
+## [248] &quot;r_morphospecies__zi[Bezzia.sp..1,Intercept]&quot;                                                                                                       
+## [249] &quot;r_morphospecies__zi[Bezzia.sp..2,Intercept]&quot;                                                                                                       
+## [250] &quot;r_morphospecies__zi[Callistocypris.mckenziei,Intercept]&quot;                                                                                           
+## [251] &quot;r_morphospecies__zi[Cecidomyiadae.sp.1.(a.few.Empididae.sp.3.mixed.in),Intercept]&quot;                                                                 
+## [252] &quot;r_morphospecies__zi[Chironomus.aff..detriticula,Intercept]&quot;                                                                                        
+## [253] &quot;r_morphospecies__zi[Corethrellidae.sp.A.(needs.taxonomist,.may.be.same.as.B/C/D),Intercept]&quot;                                                       
+## [254] &quot;r_morphospecies__zi[Corethrellidae.sp.B,Intercept]&quot;                                                                                                
+## [255] &quot;r_morphospecies__zi[Corethrellidae.sp.C,Intercept]&quot;                                                                                                
+## [256] &quot;r_morphospecies__zi[Corethrellidae.sp.D,Intercept]&quot;                                                                                                
+## [257] &quot;r_morphospecies__zi[Culex.(Microculex).spp.,Intercept]&quot;                                                                                            
+## [258] &quot;r_morphospecies__zi[Dolichopodidae.sp.,Intercept]&quot;                                                                                                 
+## [259] &quot;r_morphospecies__zi[Dolichopodidae.spA,Intercept]&quot;                                                                                                 
+## [260] &quot;r_morphospecies__zi[Empididae.sp.2.(a.few.Muscidae.sp.mixed.in),Intercept]&quot;                                                                        
+## [261] &quot;r_morphospecies__zi[Empididae.sp..1,Intercept]&quot;                                                                                                    
+## [262] &quot;r_morphospecies__zi[Ephydridae.sp..1,Intercept]&quot;                                                                                                   
+## [263] &quot;r_morphospecies__zi[Ephydridae.sp..2,Intercept]&quot;                                                                                                   
+## [264] &quot;r_morphospecies__zi[Leech.sp.A.(green.dots),Intercept]&quot;                                                                                            
+## [265] &quot;r_morphospecies__zi[Leech.sp.B.(black),Intercept]&quot;                                                                                                 
+## [266] &quot;r_morphospecies__zi[Leptagrion.andromache,Intercept]&quot;                                                                                              
+## [267] &quot;r_morphospecies__zi[Leptagrion.elongatum.(C.and.D.-.the.same.species),Intercept]&quot;                                                                  
+## [268] &quot;r_morphospecies__zi[Leptagrion.macrurum.and.L..bocainense.(mix,.Zygoptera.sp.B,.tan),Intercept]&quot;                                                   
+## [269] &quot;r_morphospecies__zi[Metriocnemus.sp.,Intercept]&quot;                                                                                                   
+## [270] &quot;r_morphospecies__zi[Monopelopia.aff.caraguata,Intercept]&quot;                                                                                          
+## [271] &quot;r_morphospecies__zi[Muscomorpha.sp..1,Intercept]&quot;                                                                                                  
+## [272] &quot;r_morphospecies__zi[Olbiogaster.sp.,Intercept]&quot;                                                                                                    
+## [273] &quot;r_morphospecies__zi[Orthocladiinae.sp.2.with.some.Orthocladiinae.sp..1.mixed.in,Intercept]&quot;                                                        
+## [274] &quot;r_morphospecies__zi[Phoniomyia.spp..(lumped.P..edwardsi,.P..mulhensi,.P..theobaldi,.Culicidae.sp..A.+.F),Intercept]&quot;                               
+## [275] &quot;r_morphospecies__zi[Phylloicus.bromeliarum,Intercept]&quot;                                                                                             
+## [276] &quot;r_morphospecies__zi[Polypedium.sp.1,Intercept]&quot;                                                                                                    
+## [277] &quot;r_morphospecies__zi[Polypedium.sp.2,Intercept]&quot;                                                                                                    
+## [278] &quot;r_morphospecies__zi[Psychodid.sp.A.(pigpen),Intercept]&quot;                                                                                            
+## [279] &quot;r_morphospecies__zi[Psychodid.sp.B+C.(same.species),Intercept]&quot;                                                                                    
+## [280] &quot;r_morphospecies__zi[Psychodid.sp.D,Intercept]&quot;                                                                                                     
+## [281] &quot;r_morphospecies__zi[Psychodid.sp.E,Intercept]&quot;                                                                                                     
+## [282] &quot;r_morphospecies__zi[Psychodid.sp.F+G.(same.species),Intercept]&quot;                                                                                    
+## [283] &quot;r_morphospecies__zi[Sciaridae.sp.,Intercept]&quot;                                                                                                      
+## [284] &quot;r_morphospecies__zi[Scyrtes.sp..1,Intercept]&quot;                                                                                                      
+## [285] &quot;r_morphospecies__zi[Scyrtes.sp..2,Intercept]&quot;                                                                                                      
+## [286] &quot;r_morphospecies__zi[Stenochironomus.subgenus.petalopholeus.(leaf.miner,.green.leaves.or.those.that.just.fallen),Intercept]&quot;                        
+## [287] &quot;r_morphospecies__zi[Tabanid.sp.A,Intercept]&quot;                                                                                                       
+## [288] &quot;r_morphospecies__zi[Tabanid.spB.(green,.small-med),Intercept]&quot;                                                                                     
+## [289] &quot;r_morphospecies__zi[Tabanidae.sp..(=Diptera.sp.J),Intercept]&quot;                                                                                      
+## [290] &quot;r_morphospecies__zi[Tanytarsus.sp.,Intercept]&quot;                                                                                                     
+## [291] &quot;r_morphospecies__zi[Tipulidae.sp..(=Diptera.sp.L),Intercept]&quot;                                                                                      
+## [292] &quot;r_morphospecies__zi[Trentepohlia.sp.,Intercept]&quot;                                                                                                   
+## [293] &quot;r_morphospecies__zi[Tubificidae.sp.,Intercept]&quot;                                                                                                    
+## [294] &quot;r_morphospecies__zi[Wyeomyia.spp.,Intercept]&quot;                                                                                                      
+## [295] &quot;r_morphospecies__zi[?Dasyhelea.sp.,max_vol_log_c]&quot;                                                                                                 
+## [296] &quot;r_morphospecies__zi[?Drosophilidae.sp..A,max_vol_log_c]&quot;                                                                                           
+## [297] &quot;r_morphospecies__zi[?Pseudochironomus,max_vol_log_c]&quot;                                                                                              
+## [298] &quot;r_morphospecies__zi[Aedes.albopictus,max_vol_log_c]&quot;                                                                                               
+## [299] &quot;r_morphospecies__zi[aff..Copestilum.sp.,max_vol_log_c]&quot;                                                                                            
+## [300] &quot;r_morphospecies__zi[Anopheles.bellator,max_vol_log_c]&quot;                                                                                             
+## [301] &quot;r_morphospecies__zi[Bezzia.sp..1,max_vol_log_c]&quot;                                                                                                   
+## [302] &quot;r_morphospecies__zi[Bezzia.sp..2,max_vol_log_c]&quot;                                                                                                   
+## [303] &quot;r_morphospecies__zi[Callistocypris.mckenziei,max_vol_log_c]&quot;                                                                                       
+## [304] &quot;r_morphospecies__zi[Cecidomyiadae.sp.1.(a.few.Empididae.sp.3.mixed.in),max_vol_log_c]&quot;                                                             
+## [305] &quot;r_morphospecies__zi[Chironomus.aff..detriticula,max_vol_log_c]&quot;                                                                                    
+## [306] &quot;r_morphospecies__zi[Corethrellidae.sp.A.(needs.taxonomist,.may.be.same.as.B/C/D),max_vol_log_c]&quot;                                                   
+## [307] &quot;r_morphospecies__zi[Corethrellidae.sp.B,max_vol_log_c]&quot;                                                                                            
+## [308] &quot;r_morphospecies__zi[Corethrellidae.sp.C,max_vol_log_c]&quot;                                                                                            
+## [309] &quot;r_morphospecies__zi[Corethrellidae.sp.D,max_vol_log_c]&quot;                                                                                            
+## [310] &quot;r_morphospecies__zi[Culex.(Microculex).spp.,max_vol_log_c]&quot;                                                                                        
+## [311] &quot;r_morphospecies__zi[Dolichopodidae.sp.,max_vol_log_c]&quot;                                                                                             
+## [312] &quot;r_morphospecies__zi[Dolichopodidae.spA,max_vol_log_c]&quot;                                                                                             
+## [313] &quot;r_morphospecies__zi[Empididae.sp.2.(a.few.Muscidae.sp.mixed.in),max_vol_log_c]&quot;                                                                    
+## [314] &quot;r_morphospecies__zi[Empididae.sp..1,max_vol_log_c]&quot;                                                                                                
+## [315] &quot;r_morphospecies__zi[Ephydridae.sp..1,max_vol_log_c]&quot;                                                                                               
+## [316] &quot;r_morphospecies__zi[Ephydridae.sp..2,max_vol_log_c]&quot;                                                                                               
+## [317] &quot;r_morphospecies__zi[Leech.sp.A.(green.dots),max_vol_log_c]&quot;                                                                                        
+## [318] &quot;r_morphospecies__zi[Leech.sp.B.(black),max_vol_log_c]&quot;                                                                                             
+## [319] &quot;r_morphospecies__zi[Leptagrion.andromache,max_vol_log_c]&quot;                                                                                          
+## [320] &quot;r_morphospecies__zi[Leptagrion.elongatum.(C.and.D.-.the.same.species),max_vol_log_c]&quot;                                                              
+## [321] &quot;r_morphospecies__zi[Leptagrion.macrurum.and.L..bocainense.(mix,.Zygoptera.sp.B,.tan),max_vol_log_c]&quot;                                               
+## [322] &quot;r_morphospecies__zi[Metriocnemus.sp.,max_vol_log_c]&quot;                                                                                               
+## [323] &quot;r_morphospecies__zi[Monopelopia.aff.caraguata,max_vol_log_c]&quot;                                                                                      
+## [324] &quot;r_morphospecies__zi[Muscomorpha.sp..1,max_vol_log_c]&quot;                                                                                              
+## [325] &quot;r_morphospecies__zi[Olbiogaster.sp.,max_vol_log_c]&quot;                                                                                                
+## [326] &quot;r_morphospecies__zi[Orthocladiinae.sp.2.with.some.Orthocladiinae.sp..1.mixed.in,max_vol_log_c]&quot;                                                    
+## [327] &quot;r_morphospecies__zi[Phoniomyia.spp..(lumped.P..edwardsi,.P..mulhensi,.P..theobaldi,.Culicidae.sp..A.+.F),max_vol_log_c]&quot;                           
+## [328] &quot;r_morphospecies__zi[Phylloicus.bromeliarum,max_vol_log_c]&quot;                                                                                         
+## [329] &quot;r_morphospecies__zi[Polypedium.sp.1,max_vol_log_c]&quot;                                                                                                
+## [330] &quot;r_morphospecies__zi[Polypedium.sp.2,max_vol_log_c]&quot;                                                                                                
+## [331] &quot;r_morphospecies__zi[Psychodid.sp.A.(pigpen),max_vol_log_c]&quot;                                                                                        
+## [332] &quot;r_morphospecies__zi[Psychodid.sp.B+C.(same.species),max_vol_log_c]&quot;                                                                                
+## [333] &quot;r_morphospecies__zi[Psychodid.sp.D,max_vol_log_c]&quot;                                                                                                 
+## [334] &quot;r_morphospecies__zi[Psychodid.sp.E,max_vol_log_c]&quot;                                                                                                 
+## [335] &quot;r_morphospecies__zi[Psychodid.sp.F+G.(same.species),max_vol_log_c]&quot;                                                                                
+## [336] &quot;r_morphospecies__zi[Sciaridae.sp.,max_vol_log_c]&quot;                                                                                                  
+## [337] &quot;r_morphospecies__zi[Scyrtes.sp..1,max_vol_log_c]&quot;                                                                                                  
+## [338] &quot;r_morphospecies__zi[Scyrtes.sp..2,max_vol_log_c]&quot;                                                                                                  
+## [339] &quot;r_morphospecies__zi[Stenochironomus.subgenus.petalopholeus.(leaf.miner,.green.leaves.or.those.that.just.fallen),max_vol_log_c]&quot;                    
+## [340] &quot;r_morphospecies__zi[Tabanid.sp.A,max_vol_log_c]&quot;                                                                                                   
+## [341] &quot;r_morphospecies__zi[Tabanid.spB.(green,.small-med),max_vol_log_c]&quot;                                                                                 
+## [342] &quot;r_morphospecies__zi[Tabanidae.sp..(=Diptera.sp.J),max_vol_log_c]&quot;                                                                                  
+## [343] &quot;r_morphospecies__zi[Tanytarsus.sp.,max_vol_log_c]&quot;                                                                                                 
+## [344] &quot;r_morphospecies__zi[Tipulidae.sp..(=Diptera.sp.L),max_vol_log_c]&quot;                                                                                  
+## [345] &quot;r_morphospecies__zi[Trentepohlia.sp.,max_vol_log_c]&quot;                                                                                               
+## [346] &quot;r_morphospecies__zi[Tubificidae.sp.,max_vol_log_c]&quot;                                                                                                
+## [347] &quot;r_morphospecies__zi[Wyeomyia.spp.,max_vol_log_c]&quot;                                                                                                  
+## [348] &quot;r_morphospecies__zi[?Dasyhelea.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                             
+## [349] &quot;r_morphospecies__zi[?Drosophilidae.sp..A,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                       
+## [350] &quot;r_morphospecies__zi[?Pseudochironomus,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                          
+## [351] &quot;r_morphospecies__zi[Aedes.albopictus,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                           
+## [352] &quot;r_morphospecies__zi[aff..Copestilum.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                        
+## [353] &quot;r_morphospecies__zi[Anopheles.bellator,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                         
+## [354] &quot;r_morphospecies__zi[Bezzia.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                               
+## [355] &quot;r_morphospecies__zi[Bezzia.sp..2,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                               
+## [356] &quot;r_morphospecies__zi[Callistocypris.mckenziei,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                   
+## [357] &quot;r_morphospecies__zi[Cecidomyiadae.sp.1.(a.few.Empididae.sp.3.mixed.in),max_vol_log_c:approx_biomass_mg_c]&quot;                                         
+## [358] &quot;r_morphospecies__zi[Chironomus.aff..detriticula,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                
+## [359] &quot;r_morphospecies__zi[Corethrellidae.sp.A.(needs.taxonomist,.may.be.same.as.B/C/D),max_vol_log_c:approx_biomass_mg_c]&quot;                               
+## [360] &quot;r_morphospecies__zi[Corethrellidae.sp.B,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                        
+## [361] &quot;r_morphospecies__zi[Corethrellidae.sp.C,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                        
+## [362] &quot;r_morphospecies__zi[Corethrellidae.sp.D,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                        
+## [363] &quot;r_morphospecies__zi[Culex.(Microculex).spp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                    
+## [364] &quot;r_morphospecies__zi[Dolichopodidae.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                         
+## [365] &quot;r_morphospecies__zi[Dolichopodidae.spA,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                         
+## [366] &quot;r_morphospecies__zi[Empididae.sp.2.(a.few.Muscidae.sp.mixed.in),max_vol_log_c:approx_biomass_mg_c]&quot;                                                
+## [367] &quot;r_morphospecies__zi[Empididae.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                            
+## [368] &quot;r_morphospecies__zi[Ephydridae.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                           
+## [369] &quot;r_morphospecies__zi[Ephydridae.sp..2,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                           
+## [370] &quot;r_morphospecies__zi[Leech.sp.A.(green.dots),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                    
+## [371] &quot;r_morphospecies__zi[Leech.sp.B.(black),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                         
+## [372] &quot;r_morphospecies__zi[Leptagrion.andromache,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                      
+## [373] &quot;r_morphospecies__zi[Leptagrion.elongatum.(C.and.D.-.the.same.species),max_vol_log_c:approx_biomass_mg_c]&quot;                                          
+## [374] &quot;r_morphospecies__zi[Leptagrion.macrurum.and.L..bocainense.(mix,.Zygoptera.sp.B,.tan),max_vol_log_c:approx_biomass_mg_c]&quot;                           
+## [375] &quot;r_morphospecies__zi[Metriocnemus.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                           
+## [376] &quot;r_morphospecies__zi[Monopelopia.aff.caraguata,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                  
+## [377] &quot;r_morphospecies__zi[Muscomorpha.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                          
+## [378] &quot;r_morphospecies__zi[Olbiogaster.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                            
+## [379] &quot;r_morphospecies__zi[Orthocladiinae.sp.2.with.some.Orthocladiinae.sp..1.mixed.in,max_vol_log_c:approx_biomass_mg_c]&quot;                                
+## [380] &quot;r_morphospecies__zi[Phoniomyia.spp..(lumped.P..edwardsi,.P..mulhensi,.P..theobaldi,.Culicidae.sp..A.+.F),max_vol_log_c:approx_biomass_mg_c]&quot;       
+## [381] &quot;r_morphospecies__zi[Phylloicus.bromeliarum,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                     
+## [382] &quot;r_morphospecies__zi[Polypedium.sp.1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                            
+## [383] &quot;r_morphospecies__zi[Polypedium.sp.2,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                            
+## [384] &quot;r_morphospecies__zi[Psychodid.sp.A.(pigpen),max_vol_log_c:approx_biomass_mg_c]&quot;                                                                    
+## [385] &quot;r_morphospecies__zi[Psychodid.sp.B+C.(same.species),max_vol_log_c:approx_biomass_mg_c]&quot;                                                            
+## [386] &quot;r_morphospecies__zi[Psychodid.sp.D,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                             
+## [387] &quot;r_morphospecies__zi[Psychodid.sp.E,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                             
+## [388] &quot;r_morphospecies__zi[Psychodid.sp.F+G.(same.species),max_vol_log_c:approx_biomass_mg_c]&quot;                                                            
+## [389] &quot;r_morphospecies__zi[Sciaridae.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                              
+## [390] &quot;r_morphospecies__zi[Scyrtes.sp..1,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                              
+## [391] &quot;r_morphospecies__zi[Scyrtes.sp..2,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                              
+## [392] &quot;r_morphospecies__zi[Stenochironomus.subgenus.petalopholeus.(leaf.miner,.green.leaves.or.those.that.just.fallen),max_vol_log_c:approx_biomass_mg_c]&quot;
+## [393] &quot;r_morphospecies__zi[Tabanid.sp.A,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                               
+## [394] &quot;r_morphospecies__zi[Tabanid.spB.(green,.small-med),max_vol_log_c:approx_biomass_mg_c]&quot;                                                             
+## [395] &quot;r_morphospecies__zi[Tabanidae.sp..(=Diptera.sp.J),max_vol_log_c:approx_biomass_mg_c]&quot;                                                              
+## [396] &quot;r_morphospecies__zi[Tanytarsus.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                             
+## [397] &quot;r_morphospecies__zi[Tipulidae.sp..(=Diptera.sp.L),max_vol_log_c:approx_biomass_mg_c]&quot;                                                              
+## [398] &quot;r_morphospecies__zi[Trentepohlia.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                           
+## [399] &quot;r_morphospecies__zi[Tubificidae.sp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                            
+## [400] &quot;r_morphospecies__zi[Wyeomyia.spp.,max_vol_log_c:approx_biomass_mg_c]&quot;                                                                              
+## [401] &quot;prior_sd_Bromeliad&quot;                                                                                                                                
+## [402] &quot;prior_sd_morphospecies&quot;                                                                                                                            
+## [403] &quot;prior_b_intercept&quot;                                                                                                                                 
+## [404] &quot;prior_b_max_vol_log_c&quot;                                                                                                                             
+## [405] &quot;prior_b_approx_biomass_mg_c&quot;                                                                                                                       
+## [406] &quot;prior_b_max_vol_log_c:approx_biomass_mg_c&quot;                                                                                                         
+## [407] &quot;prior_b_zi_intercept&quot;                                                                                                                              
+## [408] &quot;prior_b_zi_max_vol_log_c&quot;                                                                                                                          
+## [409] &quot;prior_b_zi_approx_biomass_mg_c&quot;                                                                                                                    
+## [410] &quot;prior_b_zi_max_vol_log_c:approx_biomass_mg_c&quot;                                                                                                      
+## [411] &quot;prior_cor_Bromeliad&quot;                                                                                                                               
+## [412] &quot;prior_cor_morphospecies&quot;                                                                                                                           
+## [413] &quot;lp__&quot;</code></pre>
+<pre class="r"><code>gather_samples(ZIP_cardoso, `b_.*|prior_b_.*`, regex = TRUE) %&gt;% 
+  ungroup() %&gt;% 
+  mutate(is_prior = str_detect(term, &quot;prior&quot;),
+         term = str_replace(term, &quot;prior_&quot;, &quot;&quot;)) %&gt;% 
+  ggplot(aes(x = estimate, y = term, fill = is_prior)) +
+  geom_vline(xintercept = 0) + 
+  geom_density_ridges() +    
+  theme_minimal() + 
+  scale_fill_brewer(type = &quot;qual&quot;, palette = 2)</code></pre>
+<pre><code>## Picking joint bandwidth of 0.0259</code></pre>
+<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-9-1.png" width="672" /> In this quick little plot, we see the coefficients that model the response of the average insect in the average bromeliad<a href="#fn5" class="footnoteRef" id="fnref5"><sup>5</sup></a>. I suppose that it is encouraging that in every case the posterior (green distributions) has moved, relative to the prior (orange distributions). Usually it’s also narrower.</p>
+<p>Interestingly, in at least one place my intuition in setting up the prior was quite wrong: <code>b_zi_max_vol_log_c</code>, which describes the effect that increasing volume has on the presence/absence of the average species. I thought that such a species should be found more frequently among larger plants, but apparently not! Quite the opposite, it gets <em>less</em> likely to be present.</p>
+<p>Also worth noticing is the two posteriors for the interaction terms. This model was built in part to check for these values: to see if there is an interaction between environment and traits<a href="#fn6" class="footnoteRef" id="fnref6"><sup>6</sup></a>. However the model is pretty clear: the answer is no. Size of habitat and of body affect incidence independently.</p>
+<div id="checking-the-quality-of-the-result" class="section level3">
+<h3>Checking the quality of the result</h3>
+<p>We can also create some of the plots that Garbry et al. suggest to us. These are useful for identifying where “divergent iterations” are found. Knowing this can help you decide if they are a minor problem or Quite a Very Large Problem:</p>
+<pre class="r"><code>array_cardoso &lt;- as.array(ZIP_cardoso)
+
+NUTS_cardoso &lt;- bayesplot::nuts_params(ZIP_cardoso)
+bayesplot::mcmc_parcoord(array_cardoso, regex_pars = &quot;b_.*&quot;, np = NUTS_cardoso)</code></pre>
+<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<pre class="r"><code>bayesplot::mcmc_pairs(array_cardoso, pars = c(&quot;b_intercept&quot;, &quot;b_max_vol_log_c&quot;, &quot;b_approx_biomass_mg_c&quot;, 
+&quot;b_max_vol_log_c:approx_biomass_mg_c&quot;), np = NUTS_cardoso)</code></pre>
+<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-10-2.png" width="672" /></p>
+<p>Most useful of all are posterior predictive checks. Here I’m calculating the species richness predicted for each bromealiad – that is, the number of species that are found there. The uncertainty in this result comes from uncertainty in both parts of the model: both the zero-producing part, and the count part (which can sometimes have 0s). Species richness is the opposite of this: it’s the sum of all the times the model predicts a non-zero.</p>
+<pre class="r"><code># first make posterior predictions
+post_pred_ZIP_cardoso &lt;- brms::posterior_predict(ZIP_cardoso)
+
+species_richness &lt;- function(y) sum(y &gt; 0)
+bayesplot::ppc_stat_grouped(y = cardoso_island$abundance, yrep = post_pred_ZIP_cardoso, group = cardoso_island$Bromeliad, stat = &quot;species_richness&quot;)</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<p>And let me look at my own figure from above: the frequency of each species (that is, the number of plants in which it was observed) as a function of biomass. This is compelling because it wasn’t directly modelled, and so it is one convenient way to check.</p>
+<pre class="r"><code>cardoso_pp_sppfreq &lt;- cardoso_island %&gt;% 
+  add_predicted_samples(ZIP_cardoso, n = 500) %&gt;% 
+  group_by(morphospecies, approx_biomass_mg_c, .iteration) %&gt;%  
+  summarize(frequency = sum(pred &gt; 0)) %&gt;% 
+  mean_qi(.prob = c(.97)) %&gt;% 
+  mutate(prob_fac = factor(.prob),
+         prob_fac = forcats::fct_reorder(prob_fac, .prob, .desc = TRUE)) %&gt;% 
+  ungroup
+
+
+cardoso_island %&gt;% 
+  group_by(morphospecies, approx_biomass_mg_c) %&gt;% 
+  summarize(frequency = sum(abundance &gt; 0),
+            n = n()) %&gt;% 
+  ungroup %&gt;% 
+  ggplot(aes(x = approx_biomass_mg_c, y = frequency)) + 
+  geom_linerange(aes(ymin = conf.low, ymax = conf.high, colour = prob_fac), size = 2, data = cardoso_pp_sppfreq) + 
+  scale_colour_brewer(type = &quot;qual&quot;) +
+  geom_point() + 
+  # geom_hline(yintercept = c(0,25)) + 
+  stat_smooth(method = &quot;lm&quot;) </code></pre>
+<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
 </div>
 </div>
 <div id="questions-for-you-dear-reader" class="section level2">
@@ -730,6 +1262,9 @@ gganimate(flipbook, interval = .2, filename = here::here(&quot;static&quot;, &qu
 <ol>
 <li id="fn1"><p>I feel like I should be able to read data straight out of Zenodo, but that doesn’t seem to be possible?<a href="#fnref1">↩</a></p></li>
 <li id="fn2"><p>Also, apparently there is a way to <strong>scale a y-axis</strong> to log(x + 1), which allows you to represent 0s, using <code>scales::log1p_trans()</code> !!? did <em>you</em> know about this?! Why was I not informed!!?<a href="#fnref2">↩</a></p></li>
-<li id="fn3"><p>could <em>not</em> get <code>knitcitations</code> to correctly identify this citation; anyone have a different experience when pointing <code>knitciations</code> to arXiv? or Zenodo?<a href="#fnref3">↩</a></p></li>
+<li id="fn3"><p>Worth noting that in this dataset there actually <em>was</em> measurements of biomass within each species, across the different bromeliads. However I’m trying to develop a model for use on other datasets which are nowhere near as detailed, so that’s not useful right now.<a href="#fnref3">↩</a></p></li>
+<li id="fn4"><p>could <em>not</em> get <code>knitcitations</code> to correctly identify this citation; anyone have a different experience when pointing <code>knitciations</code> to arXiv? or Zenodo?<a href="#fnref4">↩</a></p></li>
+<li id="fn5"><p>These are what is sometimes called “fixed” effects.<a href="#fnref5">↩</a></p></li>
+<li id="fn6"><p>This is the sought-after “4th corner” or “trait-environment association” variable.<a href="#fnref6">↩</a></p></li>
 </ol>
 </div>
