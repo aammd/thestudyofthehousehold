@@ -423,6 +423,7 @@ frequency_simulation <- cardoso_simulations %>%
 gganimate(frequency_simulation, interval = 0.1, filename = here::here("static", "img", "frequency_simulation.gif"))
 
 ```
+
 ![](/img/frequency_simulation.gif)
 
 This figure shows the original data as grey points, and the prior predictions in black. Is it.. concerning? The black dots are awefully similar to the grey ones, which is just what we _don't_ want to see -- we want at least some of our data to be "extreme". On the other hand, at least sometimes several species are absent altogether, which might count as an "extreme" differences to the observed data.
@@ -430,7 +431,7 @@ This figure shows the original data as grey points, and the prior predictions in
 #### Lessons I've learned
 
 * it's _very_ hard to reason about sensible values for intercepts when working on the log scale
-* it's _even harder_ when your variables are on different scales! in an earlier version of this attempt, I logged then centred bromeliad volume but did NOTHING to insect biomass -- this made it almost impossible to set a reasonable prior on the interaction, since both had different magnitudes **and** different centres.
+* it's _even harder_ when your variables are on different scales! in an earlier version of this attempt, I log-transformed then centered bromeliad volume but did nothing to insect biomass -- this made it almost impossible to set a reasonable prior on the interaction, since the two variables had different magnitudes **and** different centres.
 * back-of-the envelope (ie informal, approximate) calculations can be super helpful when reckoning out where to place a prior. For example, I reckoned that the average size insect should be pretty common -- max about 200 per plant (so about 5.3 on a log scale) while the biggest insects should be rare (around 2 per plant, 0.6 on a log scale). So `(5.3 - 0.6) / (0 - 2.66)` is about `-1.4`, which gives us a decent guess for the coefficient on the effect of body size. Notice that this isn't based totally on the data, but also on my own reckoning based on working with the system, independently of this dataset.
 * Not only do I not understand log scales and logit scales, *I don't understand multiplication*. I was still getting enormous values for predicted counts, and it was because the variance on my random effects was so high that the 2-way interaction of body size X volume was still creating large values. To correct this, I had to tune the rate parameters up very high on the random effects, essentially saying that species are not THAT different from each other. 
 * I set the same SD for all the random coefficients within one group at the same time -- so, for example, all the 8 parameters for each species (four for abundance, four for presence/absence). I guess that what I could have done was to actually set a different SD for every random coefficient, rather that setting one random effect SD for all the effects in each group. That would have been much more laborious of course, but then again that's the size the model actually is. 
@@ -496,7 +497,7 @@ ZIP_cardoso <- readr::read_rds(here::here("content", "post", "ZIP_cardoso.rds"))
 library(tidybayes)
 library(ggridges)
 
-parameters(ZIP_cardoso)
+# parameters(ZIP_cardoso)
 
 gather_samples(ZIP_cardoso, `b_.*|prior_b_.*`, regex = TRUE) %>% 
   ungroup() %>% 
