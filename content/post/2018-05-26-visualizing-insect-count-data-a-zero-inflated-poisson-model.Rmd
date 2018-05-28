@@ -517,7 +517,7 @@ Also worth noticing is the two posteriors for the interaction terms. This model 
 
 ### Checking the quality of the result
 
-We can also create some of the plots that Garbry et al. suggest to us. These are useful for identifying where "divergent iterations" are found. Knowing this can help you decide if they are a minor problem or Quite a Very Large Problem:
+We can also create some of the diagnostic plots that Garbry et al. suggest to us. These are useful for identifying where "divergent iterations" are found. Knowing this can help you decide if they are a minor problem or Quite a Very Large Problem:
 ```{r}
 array_cardoso <- as.array(ZIP_cardoso)
 
@@ -530,7 +530,9 @@ bayesplot::mcmc_pairs(array_cardoso, pars = c("b_intercept", "b_max_vol_log_c", 
 
 ```
 
-Most useful of all are posterior predictive checks. Here I'm calculating the species richness predicted for each bromealiad -- that is, the number of species that are found there. The uncertainty in this result comes from uncertainty in both parts of the model: both the zero-producing part, and the count part (which can sometimes have 0s). Species richness is the opposite of this: it's the sum of all the times the model predicts a non-zero.
+### Posterior predictive checks
+
+Most useful of all are posterior predictive checks. Here I'm calculating the species richness predicted for each bromeliad -- that is, the number of species that are found there. The uncertainty in this result comes from uncertainty in both parts of the model: both the zero-producing part, and the count part (which can sometimes have 0s). Species richness is the opposite of this: it's the sum of all the times the model predicts a non-zero.
 
 ```{r}
 
