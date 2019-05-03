@@ -101,10 +101,21 @@ Anyway, let's focus on making predictions. Suppose we were going to sample a new
 
 We're going to do this in just three lines of code! This uses two hand packages: [`modelr::data_grid`](https://github.com/tidyverse/modelr) to set up the data, and `tidybayes::add_predicted_samples` 
 
+let's just look at a few of these samples 
+
+```{r}
+Kline %>% 
+  data_grid(logpop = seq_range(logpop, n = 200)) %>% 
+  add_predicted_draws(model = tools_pop_brms,
+                        re_formula = NULL,
+                        allow_new_levels = TRUE)
+```
+
+
 ```{r post_samp}
 Kline_post_samp <- Kline %>% 
   data_grid(logpop = seq_range(logpop, n = 200)) %>% 
-  add_predicted_samples(model = tools_pop_brms,
+  add_predicted_draws(model = tools_pop_brms,
                         re_formula = NULL,
                         allow_new_levels = TRUE)
 
@@ -115,15 +126,15 @@ As you can see, we get a monstrous long data.frame back. Each posterior sample f
 
 ```{r plot_kline_post_samp}
 inters <- Kline_post_samp %>% 
-  median_hdi(.prob = c(0.73, 0.89, 0.97))
+  median_hdi(.width = c(0.73, 0.89, 0.97))
 
 inters %>%
   ungroup %>% 
-  mutate(prob_fac = factor(.prob),
-         prob_fac = forcats::fct_reorder(prob_fac, .prob, .desc = TRUE)) %>%
-  ggplot(aes(x = logpop, y = pred)) + 
+  mutate(prob_fac = factor(.width),
+         prob_fac = forcats::fct_reorder(prob_fac, .width, .desc = TRUE)) %>%
+  ggplot(aes(x = logpop, y = .prediction)) + 
   geom_line() + 
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = prob_fac)) + 
+  geom_ribbon(aes(ymin = .lower, ymax = .upper, fill = prob_fac)) + 
   scale_fill_brewer(palette = "Greens", direction = -1) + 
   coord_cartesian(ylim = c(12, 70)) + 
   geom_line() + 
