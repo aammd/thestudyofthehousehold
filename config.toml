@@ -1,4 +1,4 @@
-baseurl = "http://thestudyofthehousehold.com/"
+baseurl = "https://thestudyofthehousehold.netlify.com/"
 # should there be a trailing / or not?!?!
 title = "The study of the household"
 theme = "ghostwriter"
