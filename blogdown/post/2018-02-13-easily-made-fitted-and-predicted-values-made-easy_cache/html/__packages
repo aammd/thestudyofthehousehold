@@ -13,3 +13,5 @@ modelr
 ggridges
 patchwork
 bindrcpp
+stringr
+forcats
