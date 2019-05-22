@@ -114,7 +114,7 @@ Kline %>%
 
 ```{r post_samp}
 Kline_post_samp <- Kline %>% 
-  data_grid(logpop = seq_range(logpop, n = 200)) %>% 
+  data_grid(logpop = seq_range(logpop, n = 120)) %>% 
   add_predicted_draws(model = tools_pop_brms,
                         re_formula = NULL,
                         allow_new_levels = TRUE)
@@ -196,8 +196,8 @@ An easy way to visualize these results is with a so-called "joyplot"^[in writing
 ```{r m_plot}
 ABC %>%
   data_grid(condition) %>%
-  add_predicted_samples(m) %>%
-  ggplot(aes(x = pred, y = condition)) +
+  add_predicted_draws(m) %>%
+  ggplot(aes(x = .prediction, y = condition)) +
   geom_density_ridges(fill = "#41b6c4") + 
   theme_minimal()
 ```
@@ -210,8 +210,8 @@ We can also say the **exact same thing** using a formula:
 ```{r m_re_condition}
 ABC %>%
   data_grid(condition) %>%
-  add_predicted_samples(m, re_formula = ~(1|condition)) %>%
-  ggplot(aes(x = pred, y = condition)) +
+  add_predicted_draws(m, re_formula = ~(1|condition)) %>%
+  ggplot(aes(x = .prediction, y = condition)) +
   geom_density_ridges(fill = "#41b6c4") +  
   theme_minimal()
 ```
@@ -226,19 +226,20 @@ OK so that was three separate ways to make predictions for the _same_ groups. Wh
 ```{r m_plot_NA_TRUE-and_zero}
 ABC %>%
   data_grid(condition) %>%
-  add_predicted_samples(m, re_formula = NA,
+  add_predicted_draws(m, re_formula = NA,
                         n = 2000) %>%
-  ggplot(aes(x = pred, y = condition)) +
+  ggplot(aes(x = .prediction, y = condition)) +
   geom_density_ridges(fill = "#41b6c4") +    theme_minimal()
 ```
 
-Ah, so if you do this, all the groups come out the same! But if they're all the same, what do they represent? It seems reasonable that they represent the model's intercept, as if the varying intercepts were all 0. Let's calculate predicitons that ignore the varying effects -- that is, using only the model intercept and the standard deviation of the response -- using a bit of handy `purrr` magic:
+Ah, so if you do this, all the groups come out the same! But if they're all the same, what do they represent? It seems reasonable that they represent the model's intercept, as if the varying intercepts were all 0. Let's calculate predicitons that ignore the varying effects -- that is, using only the model intercept and the standard deviation of the response -- using a bit of [handy `purrr` magic]^[no magic required! `rnorm` is already vectorized]:
 
 
 ```{r}
 m %>% 
-  spread_samples(b_Intercept, sigma) %>% 
-  mutate(prediction = map2_dbl(b_Intercept, sigma, ~ rnorm(1, mean = .x, sd = .y)),
+  spread_draws(b_Intercept, sigma) %>% 
+  mutate(prediction = rnorm(length(b_Intercept), b_Intercept, sigma),
+         #map2_dbl(b_Intercept, sigma, ~ rnorm(1, mean = .x, sd = .y)),
          Prediction = "prediction") %>% #glimpse %>% 
   ggplot(aes(x = prediction, y = Prediction)) +
   geom_density_ridges(fill = "#41b6c4") +    
@@ -257,9 +258,9 @@ We can also remove random effects from our predictions by excluding them from th
 ```{r}
 ABC %>%
   data_grid(condition) %>%
-  add_predicted_samples(m, re_formula = ~ 0,
+  add_predicted_draws(m, re_formula = ~ 0,
                         n = 2000) %>%
-  ggplot(aes(x = pred, y = condition)) +
+  ggplot(aes(x = .prediction, y = condition)) +
   geom_density_ridges(fill = "#41b6c4") + theme_minimal() 
 ```
 
@@ -275,10 +276,8 @@ First, asking for new levels without specifying `allow_new_levels = TRUE`:
 ```{r m_failur_no_newlevel, error=TRUE}
 # this does not work at all!!
 data_frame(condition = "bugaboo") %>%
-  add_predicted_samples(m, re_formula = ~(1|condition),
-                        n = 2000) %>%
-  ggplot(aes(x = pred, y = condition)) +
-  geom_density_ridges(fill = "#41b6c4") +    theme_minimal()
+  add_predicted_draws(m, re_formula = ~(1|condition),
+                        n = 2000)
 ```
 
 That fails because I tried to pass in a level of my grouping variable that _wasn't_ in the original model! 
@@ -287,10 +286,11 @@ Second, passing in new levels -- but telling the function to just ignore them:
 
 ```{r m_data_NA}
 data_frame(condition = "bugaboo") %>%
-  add_predicted_samples(m, re_formula = NA,#~(1|condition),
+  add_predicted_draws(m, re_formula = NA,#~(1|condition),
                         n = 2000) %>%
-  ggplot(aes(x = pred, y = condition)) +
-  geom_density_ridges(fill = "#41b6c4") +    theme_minimal()
+  ggplot(aes(x = .prediction, y = condition)) +
+  geom_density_ridges(fill = "#41b6c4") + 
+  theme_minimal()
 ```
 Here, i'm still passing in the unknown level -- but the function doesn't complain, because I'm not including random effects at all! This is the same result from above, when we used `NA` or `~0` to remove varying effects altogether. This is definitely something to watch for if you are passing in new data (I made this mistake, and it cost me an afternoon!)
 
@@ -300,10 +300,10 @@ If we avoid both of these errors, we get what we expect: our means for our origi
 ABC %>%
   data_grid(condition) %>% 
   add_row(condition = "bugaboo") %>%
-  add_predicted_samples(m, re_formula = ~(1|condition),
+  add_predicted_draws(m, re_formula = ~(1|condition),
                         allow_new_levels = TRUE,
                         n = 2000) %>%
-  ggplot(aes(x = pred, y = condition)) +
+  ggplot(aes(x = .prediction, y = condition)) +
   geom_density_ridges(fill = "#41b6c4") +    theme_minimal()
 ```
 
@@ -332,7 +332,7 @@ chimp_brms <- brm(chimp_bf, prior = chimp_priors, data = chimpanzees)
 ```{r}
 
 post_process <- . %>% 
-  mean_qi(.prob = 0.8) %>% 
+  mean_qi(.width = 0.8) %>% 
   unite(combo, prosoc_left, condition, sep = "/") %>% 
   ungroup %>% 
   mutate(combo = factor(combo, levels = c("0/0", "1/0", "0/1", "1/1")))
@@ -341,12 +341,12 @@ post_process <- . %>%
 avg_chimp <- chimpanzees %>% 
   data_grid(prosoc_left, condition) %>% 
   # NA ==> average actor
-  tidybayes::add_fitted_samples(model = chimp_brms, re_formula = NA) %>% 
+  tidybayes::add_fitted_draws(model = chimp_brms, re_formula = NA) %>% 
   post_process
 
 
 plot_avg_chimp <- avg_chimp %>% 
-  ggplot(aes(x = combo, group = 1, y = estimate, ymin = conf.low, ymax = conf.high)) + 
+  ggplot(aes(x = combo, group = 1, y = .value, ymin = .lower, ymax = .upper)) + 
   geom_ribbon(fill = "#78c679") + 
   geom_line() + 
   ylim(c(0, 1)) + 
@@ -359,7 +359,7 @@ plot_avg_chimp <- avg_chimp %>%
 marginal_chimp <- chimpanzees %>% 
   data_grid(prosoc_left, condition) %>% 
   # leave out part of the random effects formula == replace that part with all 0s
-  tidybayes::add_fitted_samples(model = chimp_brms,
+  tidybayes::add_fitted_draws(model = chimp_brms,
                                 allow_new_levels = TRUE,
                                 re_formula = ~
                                   (1|actor)# + 
@@ -368,7 +368,7 @@ marginal_chimp <- chimpanzees %>%
   post_process()
 
 plot_marginal_chimps <- marginal_chimp %>% 
-  ggplot(aes(x = combo, group = 1, y = estimate, ymin = conf.low, ymax = conf.high)) + 
+  ggplot(aes(x = combo, group = 1, y = .value, ymin = .lower, ymax = .upper)) + 
   geom_ribbon(fill = "#78c679") + 
   geom_line() + 
   ylim(c(0, 1)) + 
@@ -381,7 +381,7 @@ plot_marginal_chimps <- marginal_chimp %>%
 plot_fifty_chimps <- chimpanzees %>% 
   data_grid(prosoc_left, condition) %>% 
   # NA ==> average actor
-  tidybayes::add_fitted_samples(model = chimp_brms,
+  tidybayes::add_fitted_draws(model = chimp_brms,
                                 allow_new_levels = TRUE,
                                 n = 50,
                                 re_formula = ~
@@ -391,7 +391,7 @@ plot_fifty_chimps <- chimpanzees %>%
   unite(combo, prosoc_left, condition, sep = "/") %>% 
   ungroup %>% 
   mutate(combo = factor(combo, levels = c("0/0", "1/0", "0/1", "1/1"))) %>% 
-  ggplot(aes(x = combo, group = .iteration, y = estimate)) + 
+  ggplot(aes(x = combo, group = .draw, y = .value)) + 
   geom_line(alpha = 0.7) + 
   ylim(c(0, 1)) + 
   theme_minimal()+ 

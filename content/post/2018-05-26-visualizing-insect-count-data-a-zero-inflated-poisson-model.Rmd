@@ -548,12 +548,13 @@ And let me look at my own figure from above: the frequency of each species (that
 
 ```{r}
 cardoso_pp_sppfreq <- cardoso_island %>% 
-  add_predicted_samples(ZIP_cardoso, n = 500) %>% 
-  group_by(morphospecies, approx_biomass_mg_c, .iteration) %>%  
-  summarize(frequency = sum(pred > 0)) %>% 
-  mean_qi(.prob = c(.97)) %>% 
-  mutate(prob_fac = factor(.prob),
-         prob_fac = forcats::fct_reorder(prob_fac, .prob, .desc = TRUE)) %>% 
+  add_predicted_draws(ZIP_cardoso, n = 500) %>% 
+  group_by(morphospecies, approx_biomass_mg_c, .draw) %>% 
+  summarize(frequency = sum(.prediction > 0),
+            n = n()) %>%
+  mean_qi(.width = c(.67)) %>% 
+  mutate(prob_fac = factor(.width),
+         prob_fac = forcats::fct_reorder(prob_fac, .width, .desc = TRUE)) %>% 
   ungroup
 
 
@@ -563,11 +564,12 @@ cardoso_island %>%
             n = n()) %>% 
   ungroup %>% 
   ggplot(aes(x = approx_biomass_mg_c, y = frequency)) + 
-  geom_linerange(aes(ymin = conf.low, ymax = conf.high, colour = prob_fac), size = 2, data = cardoso_pp_sppfreq) + 
+  geom_linerange(aes(ymin = frequency.lower,
+                     ymax = frequency.upper, 
+                     colour = prob_fac), size = 2, data = cardoso_pp_sppfreq) + 
   scale_colour_brewer(type = "qual") +
-  geom_point() + 
-  # geom_hline(yintercept = c(0,25)) + 
-  stat_smooth(method = "lm") 
+  geom_point() 
+  # geom_hline(yintercept = c(0,25)) 
 
 ```
 

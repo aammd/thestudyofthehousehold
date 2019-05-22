@@ -21,8 +21,9 @@ bibliography: visual-bayes-refs.bib
 </blockquote>
 <div id="the-data-im-using" class="section level3">
 <h3>The data I’m using</h3>
-<p>I’m going to work today with one of my favourite datasets, which was happily published on Zenodo a few years ago <span class="citation">(Srivastava and Romero 2016)</span>. It comes from work my doctoral supervisor, Dr Diane Srivastava, did on an island off the coast of São Paulo state, in Brazil, called Ilha do Cardoso. Here I’m going to access the data from the github repository, but if you’d like to use it please use the published version at Zenodo<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>.</p>
-<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/cardoso_clouds.jpg" /> ( <em>The beautiful Ilha do Cardoso. Please do note that you can’t see the hordes of biting flies in this photograph</em> )</p>
+<p>I’m going to work today with one of my favourite datasets, which was happily published on Zenodo a few years ago <span class="citation">(Srivastava and Romero 2016)</span>. It comes from work my doctoral supervisor, Dr Diane Srivastava, did on an island off the coast of São Paulo state, in Brazil, called Ilha do Cardoso. Here I’m going to access the data from the github repository, but if you’d like to use it please use the published version at Zenodo<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>.</p>
+<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/cardoso_clouds.jpg" />
+( <em>The beautiful Ilha do Cardoso. Please do note that you can’t see the hordes of biting flies in this photograph</em> )</p>
 <p>These data are collected from plants called Bromeliads. Each bromeliad catches water in its cuplike leaves, and a small ecosystem assembles within these leafy puddles: a freshwater system in minature. When we sample bromeliads, we usually measure the size of the plant (the best is to measure the maximum volume a plant can hold), then we use a knife to carefully tear it to peices and catch everything which is inside it! In this dataset, extra care was taken to get an approximate idea of how big each animal was, by measuring the biomass of at least some individuals.</p>
 <div id="load-and-look-at-the-data" class="section level4">
 <h4>Load and look at the data</h4>
@@ -70,13 +71,13 @@ cardoso_island &lt;- abundance %&gt;%
          max_vol_log_c = max_vol_log - mean(max_vol_log))</code></pre>
 <pre><code>## Observations: 329
 ## Variables: 7
-## $ morphospecies           &lt;chr&gt; &quot;?Dasyhelea sp.&quot;, &quot;?Dasyhelea sp.&quot;, &quot;?...
-## $ Bromeliad               &lt;chr&gt; &quot;Brom.3&quot;, &quot;Brom.B&quot;, &quot;Brom.F&quot;, &quot;Brom.G&quot;...
-## $ abundance               &lt;int&gt; 1, 1, 21, 1, 1, 2, 1, 1, 6, 5, 4, 1, 2...
-## $ species_average_biomass &lt;dbl&gt; 0.0001000, 0.0001000, 0.0001000, 0.000...
-## $ approx_biomass_mg       &lt;dbl&gt; 0.1000, 0.1000, 0.1000, 0.1000, 0.0840...
-## $ approx_biomass_mg_log   &lt;dbl&gt; -2.302585, -2.302585, -2.302585, -2.30...
-## $ approx_biomass_mg_c     &lt;dbl&gt; -0.4343101, -0.4343101, -0.4343101, -0...</code></pre>
+## $ morphospecies           &lt;chr&gt; &quot;?Dasyhelea sp.&quot;, &quot;?Dasyhelea sp.&quot;, &quot;?Da…
+## $ Bromeliad               &lt;chr&gt; &quot;Brom.3&quot;, &quot;Brom.B&quot;, &quot;Brom.F&quot;, &quot;Brom.G&quot;, …
+## $ abundance               &lt;int&gt; 1, 1, 21, 1, 1, 2, 1, 1, 6, 5, 4, 1, 2, …
+## $ species_average_biomass &lt;dbl&gt; 0.0001000, 0.0001000, 0.0001000, 0.00010…
+## $ approx_biomass_mg       &lt;dbl&gt; 0.1000, 0.1000, 0.1000, 0.1000, 0.0840, …
+## $ approx_biomass_mg_log   &lt;dbl&gt; -2.302585, -2.302585, -2.302585, -2.3025…
+## $ approx_biomass_mg_c     &lt;dbl&gt; -0.4343101, -0.4343101, -0.4343101, -0.4…</code></pre>
 <pre class="r"><code>cardoso_island %&gt;% 
   select(Bromeliad, Maximum_volume, max_vol_log_c, morphospecies, approx_biomass_mg, approx_biomass_mg_c, abundance) %&gt;% 
   sample_n(10) %&gt;% 
@@ -95,93 +96,93 @@ cardoso_island &lt;- abundance %&gt;%
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">Brom.46</td>
-<td align="right">525</td>
-<td align="right">0.9740106</td>
-<td align="left">Corethrellidae sp C</td>
-<td align="right">0.0600000</td>
-<td align="right">-0.9451358</td>
+<td align="left">Brom.I</td>
+<td align="right">19</td>
+<td align="right">-2.3449487</td>
+<td align="left">Callistocypris mckenziei</td>
+<td align="right">0.0630000</td>
+<td align="right">-0.8963456</td>
 <td align="right">0</td>
 </tr>
 <tr class="even">
+<td align="left">Brom.95</td>
+<td align="right">410</td>
+<td align="right">0.7267695</td>
+<td align="left">Psychodid sp D</td>
+<td align="right">0.7890000</td>
+<td align="right">1.6312860</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">Brom.I</td>
+<td align="right">19</td>
+<td align="right">-2.3449487</td>
+<td align="left">Psychodid sp B+C (same species)</td>
+<td align="right">0.7890000</td>
+<td align="right">1.6312860</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">Brom.40</td>
+<td align="right">910</td>
+<td align="right">1.5240569</td>
+<td align="left">Scyrtes sp. 2</td>
+<td align="right">0.5451646</td>
+<td align="right">1.2616074</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">Brom.C</td>
+<td align="right">155</td>
+<td align="right">-0.2459626</td>
+<td align="left">Wyeomyia spp.</td>
+<td align="right">0.0400000</td>
+<td align="right">-1.3506009</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="left">Brom.95</td>
+<td align="right">410</td>
+<td align="right">0.7267695</td>
+<td align="left">Phoniomyia spp. (lumped P. edwardsi, P. mulhensi, P. theobaldi, Culicidae sp. A + F)</td>
+<td align="right">0.0400000</td>
+<td align="right">-1.3506009</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">Brom.79</td>
+<td align="right">1380</td>
+<td align="right">1.9404511</td>
+<td align="left">Bezzia sp. 2</td>
+<td align="right">0.1000000</td>
+<td align="right">-0.4343101</td>
+<td align="right">10</td>
+</tr>
+<tr class="even">
+<td align="left">Brom.16</td>
+<td align="right">1270</td>
+<td align="right">1.8573845</td>
+<td align="left">Culex (Microculex) spp.</td>
+<td align="right">0.0400000</td>
+<td align="right">-1.3506009</td>
+<td align="right">3</td>
+</tr>
+<tr class="odd">
 <td align="left">Brom.1</td>
 <td align="right">1760</td>
 <td align="right">2.1836814</td>
-<td align="left">Sciaridae sp.</td>
-<td align="right">0.1210000</td>
-<td align="right">-0.2436898</td>
-<td align="right">10</td>
-</tr>
-<tr class="odd">
-<td align="left">Brom.7</td>
-<td align="right">90</td>
-<td align="right">-0.7895780</td>
-<td align="left">aff. Copestilum sp.</td>
-<td align="right">12.2352000</td>
-<td align="right">4.3725920</td>
-<td align="right">4</td>
-</tr>
-<tr class="even">
-<td align="left">Brom.E</td>
-<td align="right">37</td>
-<td align="right">-1.6784698</td>
-<td align="left">Ephydridae sp. 2</td>
+<td align="left">Cecidomyiadae sp 1 (a few Empididae sp 3 mixed in)</td>
 <td align="right">0.0840000</td>
 <td align="right">-0.6086635</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">Brom.H</td>
-<td align="right">21</td>
-<td align="right">-2.2448653</td>
-<td align="left">Empididae sp. 1</td>
-<td align="right">0.0840000</td>
-<td align="right">-0.6086635</td>
-<td align="right">0</td>
+<td align="right">3</td>
 </tr>
 <tr class="even">
-<td align="left">Brom.82</td>
-<td align="right">8</td>
-<td align="right">-3.2099462</td>
-<td align="left">Leptagrion macrurum and L. bocainense (mix, Zygoptera sp B, tan)</td>
-<td align="right">3.4435000</td>
-<td align="right">3.1047633</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
 <td align="left">Brom.B</td>
 <td align="right">41</td>
 <td align="right">-1.5758156</td>
-<td align="left">Psychodid sp A (pigpen)</td>
-<td align="right">0.7512778</td>
-<td align="right">1.5822951</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td align="left">Brom.53</td>
-<td align="right">140</td>
-<td align="right">-0.3477453</td>
-<td align="left">Leptagrion macrurum and L. bocainense (mix, Zygoptera sp B, tan)</td>
-<td align="right">3.4435000</td>
-<td align="right">3.1047633</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">Brom.3</td>
-<td align="right">335</td>
-<td align="right">0.5247428</td>
-<td align="left">Empididae sp. 1</td>
-<td align="right">0.0840000</td>
-<td align="right">-0.6086635</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td align="left">Brom.H</td>
-<td align="right">21</td>
-<td align="right">-2.2448653</td>
-<td align="left">Tabanidae sp. (=Diptera sp J)</td>
-<td align="right">9.7000000</td>
-<td align="right">4.1404008</td>
+<td align="left">Scyrtes sp. 2</td>
+<td align="right">0.5451646</td>
+<td align="right">1.2616074</td>
 <td align="right">0</td>
 </tr>
 </tbody>
@@ -209,7 +210,7 @@ cardoso_island &lt;- abundance %&gt;%
 <pre><code>## Warning: glm.fit: algorithm did not converge</code></pre>
 <pre><code>## Warning: glm.fit: fitted rates numerically 0 occurred</code></pre>
 <p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
-<p>Here the animals are split up into three categories: small, medium and large (they’re also coloured to match their body size). Log bromeliad volume is on the x-axis, and the count of each species is on the y-axis<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a>. I also added a poisson regression for each species individually, which (among other things) helps to point out just how many there are (54 in fact).</p>
+<p>Here the animals are split up into three categories: small, medium and large (they’re also coloured to match their body size). Log bromeliad volume is on the x-axis, and the count of each species is on the y-axis<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a>. I also added a poisson regression for each species individually, which (among other things) helps to point out just how many there are (54 in fact).</p>
 <p>Here are a few things I take away from this figure:</p>
 <ul>
 <li>larger things are rarer. Not at all surprising! This is a classic result in community ecology</li>
@@ -249,7 +250,7 @@ cardoso_island &lt;- abundance %&gt;%
 \end{align}
 \]</span></p>
 <p>So for our purposes, the number of insect larvae (<span class="math inline">\(y_{ij}\)</span>) of species <span class="math inline">\(i\)</span> found in plant <span class="math inline">\(j\)</span> depends on two things: the probability that this species would be found in that plant (<span class="math inline">\(\pi_{ij}\)</span>) and the expected number of larvae of that species in that plant (<span class="math inline">\(\lambda_{ij}\)</span>). Both of these quantities can (hopefully??) be predicted from some information about the insects and the plants themselves: in this case, the size of the insect and the volume of the plant:</p>
-$$
+<p>$$
 <span class="math display">\[\begin{align}
 y_{ij} &amp;= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
 \mbox{logit}(\pi_{ij}) &amp;= \beta_{\pi0} + 
@@ -276,7 +277,7 @@ y_{ij} &amp;= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
 \alpha_{\lambda} &amp;\sim \mbox{MVNormal}(0, \Sigma_4)
 
 \end{align}\]</span>
-<p>$$</p>
+$$</p>
 <p>WHEW ALRIGHT that equation took <strong>a lot</strong> longer to type out than I hoped! I hope that it helps communicate what I have in mind. Here is a description in words:</p>
 <ol style="list-style-type: decimal">
 <li>The abundance of an insect species in a plant is a zero-inflated poisson distribution</li>
@@ -287,7 +288,7 @@ y_{ij} &amp;= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
 <li>presence/absence and abundance depend on the same things, but otherwise are totally independent.</li>
 </ol>
 <p>That last point is worth discussing. There are good reasons to relax it, and in fact that’s what I want to try to do. This post was born out of my desire to do so correctly.</p>
-<p><strong>EDIT</strong>: after writing this out, I realized that it doesn’t make a lot of sense to talk about varying slopes among species for the abundance ~ bodysize relationship. That’s because each species in this dataset has only one species-level trait for body mass. It might make more sense for a different system: say we were measuring wood density on individual trees, and were modelling instead of abundance something like their biomass or fecundity. In other words, it only makes sense to define variable slopes when there are within-group measurements of both things!<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a></p>
+<p><strong>EDIT</strong>: after writing this out, I realized that it doesn’t make a lot of sense to talk about varying slopes among species for the abundance ~ bodysize relationship. That’s because each species in this dataset has only one species-level trait for body mass. It might make more sense for a different system: say we were measuring wood density on individual trees, and were modelling instead of abundance something like their biomass or fecundity. In other words, it only makes sense to define variable slopes when there are within-group measurements of both things!<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a></p>
 </div>
 <div id="one-weird-trick-to-make-zero-inflated-models-even-better" class="section level4">
 <h4>One Weird Trick to make Zero Inflated Models Even Better</h4>
@@ -317,16 +318,18 @@ y_{ij} &amp;= \mbox{ZIPoisson}(\pi_{ij}, \lambda_{ij})\\
 </div>
 <div id="the-joint-prior-distribution" class="section level3">
 <h3>the Joint Prior Distribution</h3>
-<p>Now we have a dataset and a model that we might fit to it. Before we fire up the sampling engine, is there a way to better understand this model? Maybe even get some sensible priors while we are at it? I was greatly inspired recently by reading Visualization in Bayesian Workflow by Gabry et al. <span class="citation">(2017)</span><a href="#fn4" class="footnoteRef" id="fnref4"><sup>4</sup></a>. I’m going to follow their initial step here: selecting priors for my model, and simulating from them to see if I can get data that is “vaguely” like my observed data.</p>
+<p>Now we have a dataset and a model that we might fit to it. Before we fire up the sampling engine, is there a way to better understand this model? Maybe even get some sensible priors while we are at it? I was greatly inspired recently by reading Visualization in Bayesian Workflow by Gabry et al. <span class="citation">(2017)</span><a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a>. I’m going to follow their initial step here: selecting priors for my model, and simulating from them to see if I can get data that is “vaguely” like my observed data.</p>
 <p>Just to illustrate that there’s been some learning here, i’d like to share a picture of the first simulations I made from this model, using priors that i <em>thought</em> were OK priors:</p>
-<div class="figure">
-<img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/impossible_points.png" />
-
-</div>
+<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/impossible_points.png" /></p>
 <p>Alright so among the small animals there are.. about 100 million individuals?? and the larger animals are gone altogether – i suspect because their predicted abundance was so insane that it caused integer overflow and returned NA. The lesson my dear friends is that your primate brain does not understand the log scale, please don’t kid yourself.</p>
-<p>Seriously, I understand that we want our priors to be vague but this seems excessive. Gabry et al. have a concrete solution that we can try: create a “flipbook” of some predicted datasets, sampled from your priors, and see if you can choose priors that get you “close”. In their words:</p>
+<p>Seriously, I understand that we want our priors to be vague but this seems excessive. Gabry et al. have a concrete solution that we can try: create a “flipbook” of some predicted datasets, sampled from your priors, and see if you can choose priors that get you “close”. In their words:</p>
 <blockquote>
-<p>In particular, we say that a prior leads to a <em>weakly informative joint prior data generating process</em> if draws from the prior data generating distribution p(y) could represent any data set that could plausibly be observed. As with the standard concept of weakly informative priors, it’s important that this prior predictive distribution for the data has at least some mass around extreme but plausible data sets. On the other hand, there should be no mass on completely implausible data sets.</p>
+<p>In particular, we say that a prior leads to a <em>weakly informative joint prior data generating
+process</em> if draws from the prior data generating distribution p(y) could represent any data
+set that could plausibly be observed. As with the standard concept of weakly informative
+priors, it’s important that this prior predictive distribution for the data has at least some
+mass around extreme but plausible data sets. On the other hand, there should be no
+mass on completely implausible data sets.</p>
 </blockquote>
 <p>Alright, let me try to do this!</p>
 </div>
@@ -492,27 +495,27 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <td align="left">Brom.1</td>
 <td align="right">-0.4343101</td>
 <td align="right">2.1836814</td>
-<td align="right">0.7486041</td>
-<td align="right">0.5885533</td>
-<td align="right">-0.2358988</td>
-<td align="right">0.0221488</td>
-<td align="right">-1.404756</td>
-<td align="right">0.401307</td>
-<td align="right">-0.4403293</td>
-<td align="right">-0.1037788</td>
-<td align="right">0.0615995</td>
-<td align="right">0.0294032</td>
-<td align="right">-0.0008065</td>
-<td align="right">-0.0109661</td>
-<td align="right">-0.1647888</td>
-<td align="right">-0.0037924</td>
-<td align="right">0.2371742</td>
-<td align="right">-1.5405650</td>
-<td align="right">-0.6059821</td>
-<td align="right">2.241836</td>
-<td align="right">0.3529763</td>
+<td align="right">0.8595366</td>
+<td align="right">1.027921</td>
+<td align="right">-0.6318227</td>
+<td align="right">0.0070615</td>
+<td align="right">-1.340609</td>
+<td align="right">-0.0139516</td>
+<td align="right">-0.1078902</td>
+<td align="right">0.2122937</td>
+<td align="right">-0.0341583</td>
+<td align="right">-0.2691453</td>
+<td align="right">0.2100387</td>
+<td align="right">0.002106</td>
+<td align="right">-0.0457833</td>
+<td align="right">0.0223</td>
+<td align="right">0.0228662</td>
+<td align="right">0.0084887</td>
+<td align="right">-1.644575</td>
+<td align="right">2.550814</td>
+<td align="right">0.1618435</td>
 <td align="right">0</td>
-<td align="right">14</td>
+<td align="right">11</td>
 <td align="right">0</td>
 </tr>
 <tr class="even">
@@ -520,27 +523,27 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <td align="left">Brom.102</td>
 <td align="right">-0.4343101</td>
 <td align="right">1.1483640</td>
-<td align="right">0.7486041</td>
-<td align="right">0.5885533</td>
-<td align="right">-0.2358988</td>
-<td align="right">0.0221488</td>
-<td align="right">-1.404756</td>
-<td align="right">0.401307</td>
-<td align="right">-0.4403293</td>
-<td align="right">-0.1037788</td>
-<td align="right">0.0615995</td>
-<td align="right">0.0294032</td>
-<td align="right">-0.0008065</td>
-<td align="right">-0.0109661</td>
-<td align="right">-0.1647888</td>
-<td align="right">-0.0037924</td>
-<td align="right">-0.2870281</td>
-<td align="right">1.9035764</td>
-<td align="right">-0.8992228</td>
-<td align="right">1.611652</td>
-<td align="right">0.2892102</td>
+<td align="right">0.8595366</td>
+<td align="right">1.027921</td>
+<td align="right">-0.6318227</td>
+<td align="right">0.0070615</td>
+<td align="right">-1.340609</td>
+<td align="right">-0.0139516</td>
+<td align="right">-0.1078902</td>
+<td align="right">0.2122937</td>
+<td align="right">-0.0341583</td>
+<td align="right">-0.2691453</td>
+<td align="right">0.2100387</td>
+<td align="right">0.002106</td>
+<td align="right">-0.0457833</td>
+<td align="right">0.0223</td>
+<td align="right">0.3446203</td>
+<td align="right">0.3264217</td>
+<td align="right">-1.477246</td>
+<td align="right">1.862859</td>
+<td align="right">0.1858438</td>
 <td align="right">0</td>
-<td align="right">4</td>
+<td align="right">12</td>
 <td align="right">0</td>
 </tr>
 <tr class="odd">
@@ -548,55 +551,55 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <td align="left">Brom.16</td>
 <td align="right">-0.4343101</td>
 <td align="right">1.8573845</td>
-<td align="right">0.7486041</td>
-<td align="right">0.5885533</td>
-<td align="right">-0.2358988</td>
-<td align="right">0.0221488</td>
-<td align="right">-1.404756</td>
-<td align="right">0.401307</td>
-<td align="right">-0.4403293</td>
-<td align="right">-0.1037788</td>
-<td align="right">0.0615995</td>
-<td align="right">0.0294032</td>
-<td align="right">-0.0008065</td>
-<td align="right">-0.0109661</td>
-<td align="right">-0.1647888</td>
-<td align="right">-0.0037924</td>
-<td align="right">0.0939345</td>
-<td align="right">0.1184755</td>
-<td align="right">-0.6984016</td>
-<td align="right">2.043223</td>
-<td align="right">0.3321667</td>
-<td align="right">1</td>
-<td align="right">6</td>
-<td align="right">6</td>
+<td align="right">0.8595366</td>
+<td align="right">1.027921</td>
+<td align="right">-0.6318227</td>
+<td align="right">0.0070615</td>
+<td align="right">-1.340609</td>
+<td align="right">-0.0139516</td>
+<td align="right">-0.1078902</td>
+<td align="right">0.2122937</td>
+<td align="right">-0.0341583</td>
+<td align="right">-0.2691453</td>
+<td align="right">0.2100387</td>
+<td align="right">0.002106</td>
+<td align="right">-0.0457833</td>
+<td align="right">0.0223</td>
+<td align="right">-0.3514887</td>
+<td align="right">0.0035230</td>
+<td align="right">-1.591838</td>
+<td align="right">2.333994</td>
+<td align="right">0.1691254</td>
+<td align="right">0</td>
+<td align="right">14</td>
+<td align="right">0</td>
 </tr>
 <tr class="even">
 <td align="left">?Dasyhelea sp.</td>
 <td align="left">Brom.3</td>
 <td align="right">-0.4343101</td>
 <td align="right">0.5247428</td>
-<td align="right">0.7486041</td>
-<td align="right">0.5885533</td>
-<td align="right">-0.2358988</td>
-<td align="right">0.0221488</td>
-<td align="right">-1.404756</td>
-<td align="right">0.401307</td>
-<td align="right">-0.4403293</td>
-<td align="right">-0.1037788</td>
-<td align="right">0.0615995</td>
-<td align="right">0.0294032</td>
-<td align="right">-0.0008065</td>
-<td align="right">-0.0109661</td>
-<td align="right">-0.1647888</td>
-<td align="right">-0.0037924</td>
-<td align="right">-0.1619531</td>
-<td align="right">1.0856690</td>
-<td align="right">-1.0758556</td>
-<td align="right">1.232061</td>
-<td align="right">0.2542911</td>
+<td align="right">0.8595366</td>
+<td align="right">1.027921</td>
+<td align="right">-0.6318227</td>
+<td align="right">0.0070615</td>
+<td align="right">-1.340609</td>
+<td align="right">-0.0139516</td>
+<td align="right">-0.1078902</td>
+<td align="right">0.2122937</td>
+<td align="right">-0.0341583</td>
+<td align="right">-0.2691453</td>
+<td align="right">0.2100387</td>
+<td align="right">0.002106</td>
+<td align="right">-0.0457833</td>
+<td align="right">0.0223</td>
+<td align="right">0.6004429</td>
+<td align="right">-0.0290400</td>
+<td align="right">-1.376455</td>
+<td align="right">1.448470</td>
+<td align="right">0.2015789</td>
 <td align="right">0</td>
-<td align="right">4</td>
+<td align="right">3</td>
 <td align="right">0</td>
 </tr>
 <tr class="odd">
@@ -604,27 +607,27 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <td align="left">Brom.4</td>
 <td align="right">-0.4343101</td>
 <td align="right">1.4076466</td>
-<td align="right">0.7486041</td>
-<td align="right">0.5885533</td>
-<td align="right">-0.2358988</td>
-<td align="right">0.0221488</td>
-<td align="right">-1.404756</td>
-<td align="right">0.401307</td>
-<td align="right">-0.4403293</td>
-<td align="right">-0.1037788</td>
-<td align="right">0.0615995</td>
-<td align="right">0.0294032</td>
-<td align="right">-0.0008065</td>
-<td align="right">-0.0109661</td>
-<td align="right">-0.1647888</td>
-<td align="right">-0.0037924</td>
-<td align="right">0.5925133</td>
-<td align="right">-2.3559280</td>
-<td align="right">-0.8257842</td>
-<td align="right">1.769473</td>
-<td align="right">0.3045372</td>
+<td align="right">0.8595366</td>
+<td align="right">1.027921</td>
+<td align="right">-0.6318227</td>
+<td align="right">0.0070615</td>
+<td align="right">-1.340609</td>
+<td align="right">-0.0139516</td>
+<td align="right">-0.1078902</td>
+<td align="right">0.2122937</td>
+<td align="right">-0.0341583</td>
+<td align="right">-0.2691453</td>
+<td align="right">0.2100387</td>
+<td align="right">0.002106</td>
+<td align="right">-0.0457833</td>
+<td align="right">0.0223</td>
+<td align="right">0.6001404</td>
+<td align="right">-0.9860628</td>
+<td align="right">-1.519151</td>
+<td align="right">2.035149</td>
+<td align="right">0.1795866</td>
 <td align="right">0</td>
-<td align="right">8</td>
+<td align="right">7</td>
 <td align="right">0</td>
 </tr>
 <tr class="even">
@@ -632,53 +635,50 @@ knitr::kable(head(fake_cardoso))</code></pre>
 <td align="left">Brom.40</td>
 <td align="right">-0.4343101</td>
 <td align="right">1.5240569</td>
-<td align="right">0.7486041</td>
-<td align="right">0.5885533</td>
-<td align="right">-0.2358988</td>
-<td align="right">0.0221488</td>
-<td align="right">-1.404756</td>
-<td align="right">0.401307</td>
-<td align="right">-0.4403293</td>
-<td align="right">-0.1037788</td>
-<td align="right">0.0615995</td>
-<td align="right">0.0294032</td>
-<td align="right">-0.0008065</td>
-<td align="right">-0.0109661</td>
-<td align="right">-0.1647888</td>
-<td align="right">-0.0037924</td>
-<td align="right">0.1451408</td>
-<td align="right">0.1127569</td>
-<td align="right">-0.7928125</td>
-<td align="right">1.840331</td>
-<td align="right">0.3115651</td>
+<td align="right">0.8595366</td>
+<td align="right">1.027921</td>
+<td align="right">-0.6318227</td>
+<td align="right">0.0070615</td>
+<td align="right">-1.340609</td>
+<td align="right">-0.0139516</td>
+<td align="right">-0.1078902</td>
+<td align="right">0.2122937</td>
+<td align="right">-0.0341583</td>
+<td align="right">-0.2691453</td>
+<td align="right">0.2100387</td>
+<td align="right">0.002106</td>
+<td align="right">-0.0457833</td>
+<td align="right">0.0223</td>
+<td align="right">0.3494010</td>
+<td align="right">-0.2266559</td>
+<td align="right">-1.537966</td>
+<td align="right">2.112502</td>
+<td align="right">0.1768312</td>
 <td align="right">0</td>
-<td align="right">10</td>
+<td align="right">12</td>
 <td align="right">0</td>
 </tr>
 </tbody>
 </table>
-<p>We can also do this multiple times, and create the very “flipbook” to which Gabry et al. encourage us:</p>
+<p>We can also do this multiple times, and create the very “flipbook” to which Gabry et al. encourage us:</p>
 <pre class="r"><code>cardoso_simulations &lt;- purrr::rerun(simulate_one_cardoso(), .n = 10)
 
 library(gganimate)
-flipbook &lt;- cardoso_simulations %&gt;% 
+flipbook &lt;- cardoso_simulations %&gt;%
   map(~ .x %&gt;% select(max_vol_log_c, abundance, approx_biomass_mg_c)) %&gt;% 
   bind_rows(.id = &quot;sim&quot;) %&gt;% 
   mutate(cutbio = cut(approx_biomass_mg_c, breaks = 3)) %&gt;% 
-  ggplot(aes(x = max_vol_log_c, y = abundance, fill = approx_biomass_mg_c, frame = sim)) + 
-  geom_point(pch = 21, size = 2.3, alpha = 0.8) + facet_wrap(~cutbio) + scale_fill_viridis_c() + 
-  coord_trans(y = scales::log1p_trans(), limy = c(0, 1e4)) + guides(fill = FALSE)
+  ggplot(aes(x = max_vol_log_c, y = abundance, fill = approx_biomass_mg_c)) + 
+  geom_point(pch = 21, size = 2.3, alpha = 0.8) + 
+  facet_wrap(~cutbio) + 
+  transition_manual(sim) + 
+  scale_fill_viridis_c() + 
+  coord_trans(y = scales::log1p_trans(), limy = c(0, 1e4)) +
+  guides(fill = FALSE)
   
-gganimate(flipbook, interval = .2, filename = here::here(&quot;static&quot;, &quot;img&quot;, &quot;flipbook.gif&quot;))</code></pre>
-<pre><code>## Executing: 
-## convert -loop 0 -delay 20 Rplot1.png Rplot2.png Rplot3.png
-##     Rplot4.png Rplot5.png Rplot6.png Rplot7.png Rplot8.png
-##     Rplot9.png Rplot10.png &#39;flipbook.gif&#39;</code></pre>
-<pre><code>## Output at: flipbook.gif</code></pre>
-<div class="figure">
-<img src="/img/flipbook.gif" />
-
-</div>
+gganimate::anim_save(animation = animate(flipbook), filename = here::here(&quot;static&quot;, &quot;img&quot;, &quot;flipbook.gif&quot;))</code></pre>
+<pre><code>## nframes and fps adjusted to match transition</code></pre>
+<p><img src="/img/flipbook.gif" /></p>
 <p>Uh, not bad, I guess! In general, but not always, the large things (on the right) are rarer. Mostly always, animals are more common when plants are larger. Abundances are pretty frequently insanely high, which is a good thing (5000 is already practically impossible). I’d stress again that at this point, the model does no more than catch basic information that any ecologist should be able to describe.</p>
 <p>We can also look at this a different way: again by looking at the prescences of different species:</p>
 <pre class="r"><code>frequency_simulation &lt;- cardoso_simulations %&gt;% 
@@ -687,7 +687,7 @@ gganimate(flipbook, interval = .2, filename = here::here(&quot;static&quot;, &qu
   group_by(sim, morphospecies, approx_biomass_mg_c) %&gt;% 
   summarize(frequency = sum(abundance &gt; 0),
             n = n()) %&gt;% 
-  ggplot(aes(x = approx_biomass_mg_c, y = frequency, frame = sim)) +
+  ggplot(aes(x = approx_biomass_mg_c, y = frequency)) +
   geom_point(aes(x = approx_biomass_mg_c, y = frequency),
              data = cardoso_island %&gt;% 
                group_by(morphospecies, approx_biomass_mg_c) %&gt;% 
@@ -696,19 +696,12 @@ gganimate(flipbook, interval = .2, filename = here::here(&quot;static&quot;, &qu
              colour = &quot;lightgrey&quot;,
              inherit.aes = FALSE) +
   geom_point() +
-  geom_hline(yintercept = c(0,25)) + 
+  geom_hline(yintercept = c(0,25)) +
+  transition_manual(frames = sim) + 
   theme_bw()
 
-gganimate(frequency_simulation, interval = 0.1, filename = here::here(&quot;static&quot;, &quot;img&quot;, &quot;frequency_simulation.gif&quot;))</code></pre>
-<pre><code>## Executing: 
-## convert -loop 0 -delay 10 Rplot1.png Rplot2.png Rplot3.png
-##     Rplot4.png Rplot5.png Rplot6.png Rplot7.png Rplot8.png
-##     Rplot9.png Rplot10.png &#39;frequency_simulation.gif&#39;</code></pre>
-<pre><code>## Output at: frequency_simulation.gif</code></pre>
-<div class="figure">
-<img src="/img/frequency_simulation.gif" />
-
-</div>
+#gganimate::anim_save(animation = animate(frequency_simulation), filename = here::here(&quot;static&quot;, &quot;img&quot;, &quot;frequency_simulation.gif&quot;))</code></pre>
+<p><img src="/img/frequency_simulation.gif" /></p>
 <p>This figure shows the original data as grey points, and the prior predictions in black. Is it.. concerning? The black dots are awefully similar to the grey ones, which is just what we <em>don’t</em> want to see – we want at least some of our data to be “extreme”. On the other hand, at least sometimes several species are absent altogether, which might count as an “extreme” differences to the observed data.</p>
 <div id="lessons-ive-learned" class="section level4">
 <h4>Lessons I’ve learned</h4>
@@ -770,10 +763,18 @@ ZIP_cardoso&lt;- brm(bf_zip_cardoso,
 
 readr::write_rds(ZIP_cardoso, here::here(&quot;content&quot;, &quot;post&quot; , &quot;ZIP_cardoso.rds&quot;))</code></pre>
 <pre class="r"><code>ZIP_cardoso &lt;- readr::read_rds(here::here(&quot;content&quot;, &quot;post&quot;, &quot;ZIP_cardoso.rds&quot;))</code></pre>
-<pre class="r"><code>library(tidybayes)
-library(ggridges)
-
-# parameters(ZIP_cardoso)
+<pre class="r"><code>library(tidybayes)</code></pre>
+<pre><code>## Warning: package &#39;tidybayes&#39; was built under R version 3.5.2</code></pre>
+<pre><code>## NOTE: As of tidybayes version 1.0, several functions, arguments, and output column names
+##       have undergone significant name changes in order to adopt a unified naming scheme.
+##       See help(&#39;tidybayes-deprecated&#39;) for more information.</code></pre>
+<pre class="r"><code>library(ggridges)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;ggridges&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:ggplot2&#39;:
+## 
+##     scale_discrete_manual</code></pre>
+<pre class="r"><code># parameters(ZIP_cardoso)
 
 gather_samples(ZIP_cardoso, `b_.*|prior_b_.*`, regex = TRUE) %&gt;% 
   ungroup() %&gt;% 
@@ -784,13 +785,17 @@ gather_samples(ZIP_cardoso, `b_.*|prior_b_.*`, regex = TRUE) %&gt;%
   geom_density_ridges() +    
   theme_minimal() + 
   scale_fill_brewer(type = &quot;qual&quot;, palette = 2)</code></pre>
+<pre><code>## Warning: &#39;gather_samples&#39; is deprecated.
+## Use &#39;gather_draws&#39; instead.
+## See help(&quot;Deprecated&quot;) and help(&quot;tidybayes-deprecated&quot;).</code></pre>
 <pre><code>## Picking joint bandwidth of 0.0259</code></pre>
-<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-9-1.png" width="672" /> In this quick little plot, we see the coefficients that model the response of the average insect in the average bromeliad<a href="#fn5" class="footnoteRef" id="fnref5"><sup>5</sup></a>. I suppose that it is encouraging that in every case the posterior (green distributions) has moved, relative to the prior (orange distributions). Usually it’s also narrower.</p>
+<p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-9-1.png" width="672" />
+In this quick little plot, we see the coefficients that model the response of the average insect in the average bromeliad<a href="#fn5" class="footnote-ref" id="fnref5"><sup>5</sup></a>. I suppose that it is encouraging that in every case the posterior (green distributions) has moved, relative to the prior (orange distributions). Usually it’s also narrower.</p>
 <p>Interestingly, in at least one place my intuition in setting up the prior was quite wrong: <code>b_zi_max_vol_log_c</code>, which describes the effect that increasing volume has on the presence/absence of the average species. I thought that such a species should be found more frequently among larger plants, but apparently not! Quite the opposite, it gets <em>less</em> likely to be present.</p>
-<p>Also worth noticing is the two posteriors for the interaction terms. This model was built in part to check for these values: to see if there is an interaction between environment and traits<a href="#fn6" class="footnoteRef" id="fnref6"><sup>6</sup></a>. However the model is pretty clear: the answer is no. Size of habitat and of body affect incidence independently.</p>
+<p>Also worth noticing is the two posteriors for the interaction terms. This model was built in part to check for these values: to see if there is an interaction between environment and traits<a href="#fn6" class="footnote-ref" id="fnref6"><sup>6</sup></a>. However the model is pretty clear: the answer is no. Size of habitat and of body affect incidence independently.</p>
 <div id="checking-the-quality-of-the-result" class="section level3">
 <h3>Checking the quality of the result</h3>
-<p>We can also create some of the diagnostic plots that Garbry et al. suggest to us. These are useful for identifying where “divergent iterations” are found. Knowing this can help you decide if they are a minor problem or Quite a Very Large Problem:</p>
+<p>We can also create some of the diagnostic plots that Garbry et al. suggest to us. These are useful for identifying where “divergent iterations” are found. Knowing this can help you decide if they are a minor problem or Quite a Very Large Problem:</p>
 <pre class="r"><code>array_cardoso &lt;- as.array(ZIP_cardoso)
 
 NUTS_cardoso &lt;- bayesplot::nuts_params(ZIP_cardoso)
@@ -812,12 +817,13 @@ bayesplot::ppc_stat_grouped(y = cardoso_island$abundance, yrep = post_pred_ZIP_c
 <p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
 <p>And let me look at my own figure from above: the frequency of each species (that is, the number of plants in which it was observed) as a function of biomass. This is compelling because it wasn’t directly modelled, and so it is one convenient way to check.</p>
 <pre class="r"><code>cardoso_pp_sppfreq &lt;- cardoso_island %&gt;% 
-  add_predicted_samples(ZIP_cardoso, n = 500) %&gt;% 
-  group_by(morphospecies, approx_biomass_mg_c, .iteration) %&gt;%  
-  summarize(frequency = sum(pred &gt; 0)) %&gt;% 
-  mean_qi(.prob = c(.97)) %&gt;% 
-  mutate(prob_fac = factor(.prob),
-         prob_fac = forcats::fct_reorder(prob_fac, .prob, .desc = TRUE)) %&gt;% 
+  add_predicted_draws(ZIP_cardoso, n = 500) %&gt;% 
+  group_by(morphospecies, approx_biomass_mg_c, .draw) %&gt;% 
+  summarize(frequency = sum(.prediction &gt; 0),
+            n = n()) %&gt;%
+  mean_qi(.width = c(.67)) %&gt;% 
+  mutate(prob_fac = factor(.width),
+         prob_fac = forcats::fct_reorder(prob_fac, .width, .desc = TRUE)) %&gt;% 
   ungroup
 
 
@@ -827,12 +833,13 @@ cardoso_island %&gt;%
             n = n()) %&gt;% 
   ungroup %&gt;% 
   ggplot(aes(x = approx_biomass_mg_c, y = frequency)) + 
-  geom_linerange(aes(ymin = conf.low, ymax = conf.high, colour = prob_fac), size = 2, data = cardoso_pp_sppfreq) + 
+  geom_linerange(aes(ymin = frequency.lower,
+                     ymax = frequency.upper, 
+                     colour = prob_fac), size = 2, data = cardoso_pp_sppfreq) + 
   scale_colour_brewer(type = &quot;qual&quot;) +
-  geom_point() + 
-  # geom_hline(yintercept = c(0,25)) + 
-  stat_smooth(method = &quot;lm&quot;) </code></pre>
+  geom_point() </code></pre>
 <p><img src="/post/2018-05-26-visualizing-insect-count-data-a-zero-inflated-poisson-model_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<pre class="r"><code>  # geom_hline(yintercept = c(0,25)) </code></pre>
 </div>
 </div>
 <div id="questions-for-you-dear-reader" class="section level2">
@@ -853,18 +860,18 @@ cardoso_island %&gt;%
 <p>Gabry, Jonah, Daniel Simpson, Aki Vehtari, Michael Betancourt, and Andrew Gelman. 2017. “Visualization in Bayesian Workflow,” September.</p>
 </div>
 <div id="ref-https://doi.org/10.5281/zenodo.168039">
-<p>Srivastava, Diane S., and Gustavo Q. Romero. 2016. “Bromeliad Macroinvertebrate Survey, Ilha Do Cardoso, 2008.” Zenodo. doi:<a href="https://doi.org/10.5281/zenodo.168039">10.5281/zenodo.168039</a>.</p>
+<p>Srivastava, Diane S., and Gustavo Q. Romero. 2016. “Bromeliad Macroinvertebrate Survey, Ilha Do Cardoso, 2008.” Zenodo. <a href="https://doi.org/10.5281/zenodo.168039">https://doi.org/10.5281/zenodo.168039</a>.</p>
 </div>
 </div>
 </div>
 <div class="footnotes">
 <hr />
 <ol>
-<li id="fn1"><p>I feel like I should be able to read data straight out of Zenodo, but that doesn’t seem to be possible?<a href="#fnref1">↩</a></p></li>
-<li id="fn2"><p>Also, apparently there is a way to <strong>scale a y-axis</strong> to log(x + 1), which allows you to represent 0s, using <code>scales::log1p_trans()</code> !!? did <em>you</em> know about this?! Why was I not informed!!?<a href="#fnref2">↩</a></p></li>
-<li id="fn3"><p>Worth noting that in this dataset there actually <em>was</em> measurements of biomass within each species, across the different bromeliads. However I’m trying to develop a model for use on other datasets which are nowhere near as detailed, so that’s not useful right now.<a href="#fnref3">↩</a></p></li>
-<li id="fn4"><p>could <em>not</em> get <code>knitcitations</code> to correctly identify this citation; anyone have a different experience when pointing <code>knitciations</code> to arXiv? or Zenodo?<a href="#fnref4">↩</a></p></li>
-<li id="fn5"><p>These are what is sometimes called “fixed” effects.<a href="#fnref5">↩</a></p></li>
-<li id="fn6"><p>This is the sought-after “4th corner” or “trait-environment association” variable.<a href="#fnref6">↩</a></p></li>
+<li id="fn1"><p>I feel like I should be able to read data straight out of Zenodo, but that doesn’t seem to be possible?<a href="#fnref1" class="footnote-back">↩</a></p></li>
+<li id="fn2"><p>Also, apparently there is a way to <strong>scale a y-axis</strong> to log(x + 1), which allows you to represent 0s, using <code>scales::log1p_trans()</code> !!? did <em>you</em> know about this?! Why was I not informed!!?<a href="#fnref2" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Worth noting that in this dataset there actually <em>was</em> measurements of biomass within each species, across the different bromeliads. However I’m trying to develop a model for use on other datasets which are nowhere near as detailed, so that’s not useful right now.<a href="#fnref3" class="footnote-back">↩</a></p></li>
+<li id="fn4"><p>could <em>not</em> get <code>knitcitations</code> to correctly identify this citation; anyone have a different experience when pointing <code>knitciations</code> to arXiv? or Zenodo?<a href="#fnref4" class="footnote-back">↩</a></p></li>
+<li id="fn5"><p>These are what is sometimes called “fixed” effects.<a href="#fnref5" class="footnote-back">↩</a></p></li>
+<li id="fn6"><p>This is the sought-after “4th corner” or “trait-environment association” variable.<a href="#fnref6" class="footnote-back">↩</a></p></li>
 </ol>
 </div>
