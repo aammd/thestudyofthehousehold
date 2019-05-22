@@ -384,15 +384,19 @@ We can also do this multiple times, and create the very "flipbook" to which Gabr
 cardoso_simulations <- purrr::rerun(simulate_one_cardoso(), .n = 10)
 
 library(gganimate)
-flipbook <- cardoso_simulations %>% 
+flipbook <- cardoso_simulations %>%
   map(~ .x %>% select(max_vol_log_c, abundance, approx_biomass_mg_c)) %>% 
   bind_rows(.id = "sim") %>% 
   mutate(cutbio = cut(approx_biomass_mg_c, breaks = 3)) %>% 
-  ggplot(aes(x = max_vol_log_c, y = abundance, fill = approx_biomass_mg_c, frame = sim)) + 
-  geom_point(pch = 21, size = 2.3, alpha = 0.8) + facet_wrap(~cutbio) + scale_fill_viridis_c() + 
-  coord_trans(y = scales::log1p_trans(), limy = c(0, 1e4)) + guides(fill = FALSE)
+  ggplot(aes(x = max_vol_log_c, y = abundance, fill = approx_biomass_mg_c)) + 
+  geom_point(pch = 21, size = 2.3, alpha = 0.8) + 
+  facet_wrap(~cutbio) + 
+  transition_manual(sim) + 
+  scale_fill_viridis_c() + 
+  coord_trans(y = scales::log1p_trans(), limy = c(0, 1e4)) +
+  guides(fill = FALSE)
   
-gganimate(flipbook, interval = .2, filename = here::here("static", "img", "flipbook.gif"))
+gganimate::anim_save(animation = animate(flipbook), filename = here::here("static", "img", "flipbook.gif"))
 ```
 
 ![](/img/flipbook.gif)
@@ -408,7 +412,7 @@ frequency_simulation <- cardoso_simulations %>%
   group_by(sim, morphospecies, approx_biomass_mg_c) %>% 
   summarize(frequency = sum(abundance > 0),
             n = n()) %>% 
-  ggplot(aes(x = approx_biomass_mg_c, y = frequency, frame = sim)) +
+  ggplot(aes(x = approx_biomass_mg_c, y = frequency)) +
   geom_point(aes(x = approx_biomass_mg_c, y = frequency),
              data = cardoso_island %>% 
                group_by(morphospecies, approx_biomass_mg_c) %>% 
@@ -417,10 +421,11 @@ frequency_simulation <- cardoso_simulations %>%
              colour = "lightgrey",
              inherit.aes = FALSE) +
   geom_point() +
-  geom_hline(yintercept = c(0,25)) + 
+  geom_hline(yintercept = c(0,25)) +
+  transition_manual(frames = sim) + 
   theme_bw()
 
-gganimate(frequency_simulation, interval = 0.1, filename = here::here("static", "img", "frequency_simulation.gif"))
+#gganimate::anim_save(animation = animate(frequency_simulation), filename = here::here("static", "img", "frequency_simulation.gif"))
 
 ```
 
