@@ -1,0 +1,84 @@
+---
+title: Predictive prior simulations for a simple binomial model
+author: Andrew MacDonald
+date: '2019-09-28'
+slug: binomial-variance
+categories: []
+tags: []
+description: ''
+---
+
+
+
+<p>Bayesian analysis makes you say something about the results you are going to see – <em>before</em> you run your model and get your answer! This stresses some people right out. They fear to say too much: they worry that using their prior makes them subjective, so they try to choose a prior that says very little.</p>
+<p>But when you speak, what have you said? Anyone who has lived as a language minority knows that what you try to say and what is heard are not at all the same. The conversation gets especially challenging when we are speaking the alien language of logits or exponents, as we do whenever we do many kinds of GLMs.</p>
+<p>Fortunately there is a straightforward way to ask what a model “hears”: prior simulations. Just take draws out of your prior, and see what kind of predictions that implies. Please note that this short post is inspired 100% by <a href="https://arxiv.org/abs/1708.07487">Gelman, Simpson and Betancourt 2017</a></p>
+<p>Suppose you are handing out your teaching evaluations to a class of 200 people. you are only interested in if people <em>loved</em> your class or <em>hated</em> it.
+<span class="math display">\[
+\begin{align}
+ y &amp;\sim \mbox{Binomial}(200, p)\\
+\mbox{logit}(p)\, &amp;= X \\
+X &amp;\sim \mathcal{N}(0,\sigma^{2})\,  \\
+\end{align}
+\]</span></p>
+<p>Let’s just say we begin with an even odds – about 50% of the students enjoyed the class. SO My prior is centered on 0, because the inverse logit of 0 is 0.5</p>
+<pre class="r"><code>inv_logit &lt;- function(x) exp(x)/(exp(x) + 1)
+inv_logit(0)</code></pre>
+<pre><code>## [1] 0.5</code></pre>
+<p>In other words, a 50% chance that students either love or hate your course. Depending on your subject that may or may not be reasonable, but seems like a simple place to start.</p>
+<p>But how <em>wide</em> should the prior be? A simple thing to do is to draw a few numbers – say 50 – from the prior, run these through he model, and simulate an observation using that value. A prior distribution should give us outputs that <em>seem possible</em>.</p>
+<p>A few simulations from the normal distribution help us to translate the “language” of standard deviations into the language of probabilities and proportions:</p>
+<pre class="r"><code>suppressPackageStartupMessages(library(tidyverse))
+
+dd &lt;- tibble(sd = seq(0.01,5,by = 0.05),
+                 r  = map(sd,~ rnorm(50,0,.))) %&gt;% 
+  unnest(r) %&gt;% 
+  mutate(p = inv_logit(r))
+
+dd %&gt;% 
+  # for every little world that the normal generates, sample the probability
+  mutate(b = map_dbl(p, ~ rbinom(prob = .x, size = 200, n = 1))/200) %&gt;% 
+  # mutate(m = map_dbl(b, mean)) %&gt;% ungroup %&gt;% #tail()
+  ggplot(aes(x = sd, y = b, fill = b)) + 
+  geom_point(alpha = 0.3, size = 4, pch = 21) + 
+  scale_fill_distiller(type=&quot;div&quot;, palette = 3) + 
+  theme_bw() + 
+  guides(fill = FALSE) + 
+  labs(y = &quot;Proportion of students who liked the class&quot;,
+       x = expression(paste(sigma, &quot; of prior distribution&quot;)))</code></pre>
+<p><img src="/post/2019-09-28-binomial-variance_files/figure-html/prior_predict_colour-1.png" width="672" /></p>
+<pre class="r"><code>dd %&gt;% 
+  mutate(sd_c = cut(sd, breaks = 4)) %&gt;% 
+  # for every little world that the normal generates, sample the probability
+  mutate(b = map_dbl(p, ~ rbinom(prob = .x, size = 200, n = 1))/200) %&gt;% 
+  ggplot(aes(x = b, colour = sd, group = sd)) + 
+  geom_density() + 
+  facet_wrap(~sd_c, scales = &quot;free_y&quot;)</code></pre>
+<p><img src="/post/2019-09-28-binomial-variance_files/figure-html/prior_predict_density-1.png" width="672" /></p>
+<p>It turns out that setting <span class="math inline">\(\sigma\)</span> to be close to 0 says “I am quite sure the class is evenly split”, which frankly seems weirdly specific. Meanwhile, a <span class="math inline">\(\sigma\)</span> closer to 4 is actually says something like: “I am quite sure that either everyone loved it or everyone hated it”. So what seems to be a vague prior is in fact very specific, and probably not what we want!</p>
+<p>In general, keeping the priors in GLMs within feasible limits is surprisingly hard! Prior simulations are very helpful when you’re setting up your model with priors that say what you <em>actually mean to say</em>.</p>
+<div id="small-bonus-bernoulli-trials-vs-aggregated-trials" class="section level2">
+<h2>small bonus: Bernoulli trials vs aggregated trials</h2>
+<p>You can get exactly the same effect from summing together “Bernoulli” trials (0 or 1 outcomes), or calculating one aggregated binomial (n successes out of failures) trial, as above.</p>
+<pre class="r"><code>many_samples &lt;- 300 %&gt;% 
+  rnorm(0,0.7) %&gt;% 
+  inv_logit() %&gt;% 
+  map_dbl(~ rbinom(n = 1, size = 200, prob = .))
+
+(many_samples/200) %&gt;% 
+  tibble::enframe(.) %&gt;% 
+  ggplot(aes(x = value)) + 
+  geom_density() + 
+  scale_x_continuous(limits = c(0,1)) </code></pre>
+<p><img src="/post/2019-09-28-binomial-variance_files/figure-html/bonus_agg-1.png" width="672" /></p>
+<pre class="r"><code>300 %&gt;% 
+  rnorm(0,0.7) %&gt;% 
+  inv_logit() %&gt;% 
+  map(rbinom, size = 1, n = 200) %&gt;% 
+  map_dbl(mean) %&gt;% 
+  tibble::enframe(.) %&gt;% 
+  ggplot(aes(x = value)) + 
+  geom_density() + 
+  scale_x_continuous(limits = c(0,1))</code></pre>
+<p><img src="/post/2019-09-28-binomial-variance_files/figure-html/bonus_agg-2.png" width="672" /></p>
+</div>

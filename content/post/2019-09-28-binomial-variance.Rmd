@@ -1,0 +1,101 @@
+---
+title: Predictive prior simulations for a simple binomial model
+author: Andrew MacDonald
+date: '2019-09-28'
+slug: binomial-variance
+categories: []
+tags: []
+description: ''
+---
+
+Bayesian analysis makes you say something about the results you are going to see -- *before* you run your model and get your answer! This stresses some people right out. They fear to say too much: they worry that using their prior makes them subjective, so they try to choose a prior that says very little. 
+
+But when you speak, what have you said? Anyone who has lived as a language minority knows that what you try to say and what is heard are not at all the same. The conversation gets especially challenging when we are speaking the alien language of logits or exponents, as we do whenever we do many kinds of GLMs. 
+
+Fortunately there is a straightforward way to ask what a model "hears": prior simulations. Just take draws out of your prior, and see what kind of predictions that implies. Please note that this short post is inspired 100% by [Gelman, Simpson and Betancourt 2017](https://arxiv.org/abs/1708.07487) 
+
+Suppose you are handing out your teaching evaluations to a class of 200 people. you are only interested in if people *loved* your class or *hated* it. 
+$$
+\begin{align}
+ y &\sim \mbox{Binomial}(200, p)\\
+\mbox{logit}(p)\, &= X \\
+X &\sim \mathcal{N}(0,\sigma^{2})\,  \\
+\end{align}
+$$
+
+Let's just say we begin with an even odds -- about 50% of the students enjoyed the class. SO My prior is centered on 0, because the inverse logit of 0 is 0.5
+
+```{r inv_logit}
+inv_logit <- function(x) exp(x)/(exp(x) + 1)
+inv_logit(0)
+```
+
+In other words, a 50% chance that students either love or hate your course. Depending on your subject that may or may not be reasonable, but seems like a simple place to start.
+
+But how _wide_ should the prior be? A simple thing to do is to draw a few numbers -- say 50 -- from the prior, run these through he model, and simulate an observation using that value. A prior distribution should give us outputs that _seem possible_. 
+
+A few simulations from the normal distribution help us to translate the "language" of standard deviations into the language of probabilities and proportions:
+
+```{r prior_predict_colour}
+suppressPackageStartupMessages(library(tidyverse))
+
+dd <- tibble(sd = seq(0.01,5,by = 0.05),
+                 r  = map(sd,~ rnorm(50,0,.))) %>% 
+  unnest(r) %>% 
+  mutate(p = inv_logit(r))
+
+dd %>% 
+  # for every little world that the normal generates, sample the probability
+  mutate(b = map_dbl(p, ~ rbinom(prob = .x, size = 200, n = 1))/200) %>% 
+  # mutate(m = map_dbl(b, mean)) %>% ungroup %>% #tail()
+  ggplot(aes(x = sd, y = b, fill = b)) + 
+  geom_point(alpha = 0.3, size = 4, pch = 21) + 
+  scale_fill_distiller(type="div", palette = 3) + 
+  theme_bw() + 
+  guides(fill = FALSE) + 
+  labs(y = "Proportion of students who liked the class",
+       x = expression(paste(sigma, " of prior distribution")))
+```
+
+```{r prior_predict_density}
+dd %>% 
+  mutate(sd_c = cut(sd, breaks = 4)) %>% 
+  # for every little world that the normal generates, sample the probability
+  mutate(b = map_dbl(p, ~ rbinom(prob = .x, size = 200, n = 1))/200) %>% 
+  ggplot(aes(x = b, colour = sd, group = sd)) + 
+  geom_density() + 
+  facet_wrap(~sd_c, scales = "free_y")
+
+```
+
+It turns out that setting $\sigma$ to be close to 0 says "I am quite sure the class is evenly split", which frankly seems weirdly specific. Meanwhile, a $\sigma$ closer to 4 is actually says something like: "I am quite sure that either everyone loved it or everyone hated it". So what seems to be a vague prior is in fact very specific, and probably not what we want! 
+
+In general, keeping the priors in GLMs within feasible limits is surprisingly hard! Prior simulations are very helpful when you're setting up your model with priors that say what you _actually mean to say_.
+
+## small bonus: Bernoulli trials vs aggregated trials 
+
+You can get exactly the same effect from summing together "Bernoulli" trials (0 or 1 outcomes), or calculating one aggregated binomial (n successes out of failures) trial, as above. 
+
+```{r bonus_agg}
+many_samples <- 300 %>% 
+  rnorm(0,0.7) %>% 
+  inv_logit() %>% 
+  map_dbl(~ rbinom(n = 1, size = 200, prob = .))
+
+(many_samples/200) %>% 
+  tibble::enframe(.) %>% 
+  ggplot(aes(x = value)) + 
+  geom_density() + 
+  scale_x_continuous(limits = c(0,1)) 
+
+300 %>% 
+  rnorm(0,0.7) %>% 
+  inv_logit() %>% 
+  map(rbinom, size = 1, n = 200) %>% 
+  map_dbl(mean) %>% 
+  tibble::enframe(.) %>% 
+  ggplot(aes(x = value)) + 
+  geom_density() + 
+  scale_x_continuous(limits = c(0,1))
+
+```
